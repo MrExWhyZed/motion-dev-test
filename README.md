@@ -75,7 +75,7 @@ http://localhost:4028
 
 For collaborations, project inquiries, or partnerships:
 
-* Email: [sauvikmn123@gmail.com](mailto:sauvikmn123@gmail.com)
+* Email: 
 * Website: 
 
 ---
