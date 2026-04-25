@@ -6,11 +6,9 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 const navLinks = [
-  { label: 'Work', href: '#showreel' },
   { label: 'Services', href: '#services' },
-  { label: 'Catalogue', href: '#catalogue' },
-  { label: 'Process', href: '#process' },
-  { label: 'Studio', href: '#why' },
+  { label: 'Works', href: '#showreel' },
+  { label: 'Process', href: '#how-it-works' },
 ];
 
 interface ContactFormData {
@@ -309,6 +307,12 @@ export default function Header() {
                   {link.label}
                 </button>
               ))}
+              <Link
+                href="/pricing"
+                className="px-4 py-1.5 text-[10px] font-medium tracking-[0.15em] uppercase text-muted-foreground hover:text-foreground transition-all duration-500 rounded-full hover:bg-white/4"
+              >
+                Pricing
+              </Link>
             </div>
           </nav>
 
@@ -382,6 +386,10 @@ export default function Header() {
 
           {/* Buttons */}
           <div className="mobile-nav-item flex flex-col items-center gap-3" style={{ transitionDelay: `${80 + navLinks.length * 55}ms` }}>
+            <Link href="/pricing" className="mobile-contact-btn" onClick={() => setMenuOpen(false)}>
+              <span className="pulse-dot" />
+              Pricing
+            </Link>
             <Link href="/add-project" className="mobile-contact-btn" onClick={() => setMenuOpen(false)}>
               <span className="pulse-dot" />
               Add Project

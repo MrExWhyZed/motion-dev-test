@@ -189,7 +189,7 @@ export default function WhySection() {
   }, []);
 
   return (
-    <section ref={sectionRef} id="why" className="relative overflow-hidden">
+    <section ref={sectionRef} id="why" className="relative overflow-hidden" style={{ background: 'linear-gradient(180deg, #020208 0%, #04040c 50%, #030309 100%)' }}>
 
       {/* PART 1 — SCROLL REVEAL */}
       <div className="relative py-36 sm:py-48 px-6 sm:px-10">

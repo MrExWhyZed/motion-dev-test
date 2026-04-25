@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 const testimonials = [
   {
     quote: 'Motion Grace delivered 80 campaign-ready assets in 4 days. Our traditional agency needed 6 weeks and triple the budget for half the output.',
     name: 'Camille Fontaine',
     title: 'Brand Director',
-    company: 'Maison Élite Paris',
+    company: 'Maison Elite Paris',
     initials: 'CF',
     accent: '#C9A96E',
   },
@@ -15,7 +15,7 @@ const testimonials = [
     quote: 'The digital twin they built of our serum is indistinguishable from a photograph. We launched three new colorways without a single shoot day.',
     name: 'Priya Nair',
     title: 'Head of Marketing',
-    company: 'Glacé Beauty London',
+    company: 'Glace Beauty London',
     initials: 'PN',
     accent: '#4A9EFF',
   },
@@ -31,7 +31,7 @@ const testimonials = [
     quote: 'We replaced an entire in-house photography workflow with their pipeline. The quality is higher and our turnaround time dropped from weeks to hours.',
     name: 'Lena Hartmann',
     title: 'Creative Lead',
-    company: 'Lumière Studios Berlin',
+    company: 'Lumiere Studios Berlin',
     initials: 'LH',
     accent: '#F97066',
   },
@@ -53,58 +53,38 @@ const testimonials = [
   },
 ];
 
-/* Deterministic float offsets per card */
-const floatConfigs = testimonials.map((_, i) => ({
-  dx: ((i * 37.3 + 11) % 100) - 50,  // -50 to +50
-  dy: ((i * 51.7 + 23) % 60) - 30,   // -30 to +30
-  duration: 8 + (i % 5) * 1.5,
-  delay: i * 0.6,
+const floatConfigs = testimonials.map((_, index) => ({
+  x: ((index * 31 + 9) % 24) - 12,
+  y: 10 + (index % 3) * 4,
+  duration: 4.6 + index * 0.28,
+  delay: index * 0.12,
 }));
 
 function TestimonialCard({
   item,
-  index,
-  sectionProgress,
+  setRef,
 }: {
-  item: typeof testimonials[0];
-  index: number;
-  sectionProgress: number;
+  item: typeof testimonials[number];
+  setRef: (element: HTMLDivElement | null) => void;
 }) {
-  const assemble = Math.max(0, Math.min(1, (sectionProgress - index * 0.08) / 0.5));
-  const config = floatConfigs[index];
-
   return (
-    <div
-      style={{
-        opacity: assemble,
-        transform: `translate(${(1 - assemble) * config.dx * 0.5}px, ${(1 - assemble) * config.dy * 0.5}px) scale(${0.85 + assemble * 0.15})`,
-        transition: 'none',
-        animation: assemble > 0.9 ? `float-card-${index % 3} ${config.duration}s ease-in-out infinite` : 'none',
-        animationDelay: `${config.delay}s`,
-      }}
-    >
+    <div ref={setRef}>
       <div
         className="relative overflow-hidden rounded-2xl p-6"
         style={{
           background: 'rgba(10,10,18,0.8)',
-          border: `1px solid rgba(255,255,255,0.04)`,
+          border: '1px solid rgba(255,255,255,0.04)',
           backdropFilter: 'blur(12px)',
           boxShadow: `0 0 40px rgba(0,0,0,0.4), 0 0 0 1px ${item.accent}0A`,
-          transition: 'border-color 0.5s ease, box-shadow 0.5s ease',
         }}
       >
-        {/* Soft glow */}
         <div
+          className="pointer-events-none absolute inset-0 rounded-2xl"
           style={{
-            position: 'absolute', inset: 0, borderRadius: '1rem',
-            background: `radial-gradient(ellipse 60% 50% at 30% 30%, ${item.accent}06 0%, transparent 70%)`,
-            pointerEvents: 'none',
-            animation: `opacity-pulse ${4 + index}s ease-in-out infinite`,
-            animationDelay: `${index * 0.4}s`,
+            background: `radial-gradient(ellipse 60% 50% at 30% 30%, ${item.accent}08 0%, transparent 72%)`,
           }}
         />
 
-        {/* Quote mark */}
         <div
           style={{
             fontSize: '3rem',
@@ -119,7 +99,6 @@ function TestimonialCard({
           "
         </div>
 
-        {/* Quote text */}
         <p
           style={{
             fontSize: '0.82rem',
@@ -133,16 +112,19 @@ function TestimonialCard({
           {item.quote}
         </p>
 
-        {/* Author */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div
             style={{
-              width: '36px', height: '36px',
+              width: '36px',
+              height: '36px',
               borderRadius: '50%',
               background: `${item.accent}18`,
               border: `1px solid ${item.accent}30`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '11px', fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '11px',
+              fontWeight: 700,
               color: item.accent,
               flexShrink: 0,
             }}
@@ -159,10 +141,9 @@ function TestimonialCard({
           </div>
         </div>
 
-        {/* Accent line bottom */}
         <div
+          className="pointer-events-none absolute bottom-0 left-0 right-0"
           style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
             height: '1px',
             background: `linear-gradient(90deg, transparent, ${item.accent}30, transparent)`,
           }}
@@ -174,19 +155,111 @@ function TestimonialCard({
 
 export default function FloatingTestimonialsSection() {
   const sectionRef = useRef<HTMLElement>(null);
-  const [sectionProgress, setSectionProgress] = useState<number>(0);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   useEffect(() => {
-    const handleScroll = () => {
-      if (!sectionRef.current) return;
-      const rect = sectionRef.current.getBoundingClientRect();
-      const vh = window.innerHeight;
-      const progress = Math.max(0, Math.min(1, 1 - rect.top / (vh * 0.85)));
-      setSectionProgress(progress);
+    if (!sectionRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    let mounted = true;
+    let cleanup = () => {};
+
+    void (async () => {
+      const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+        import('gsap'),
+        import('gsap/ScrollTrigger'),
+      ]);
+
+      if (!mounted || !sectionRef.current) return;
+
+      gsap.registerPlugin(ScrollTrigger);
+
+      const section = sectionRef.current;
+      const cards = cardRefs.current.filter(Boolean) as HTMLDivElement[];
+
+      const ctx = gsap.context(() => {
+        if (glowRef.current) {
+          gsap.set(glowRef.current, { autoAlpha: 0.18, scale: 0.92 });
+          gsap.to(glowRef.current, {
+            autoAlpha: 0.82,
+            scale: 1.04,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: section,
+              start: 'top 80%',
+              end: 'bottom center',
+              scrub: 1.1,
+            },
+          });
+        }
+
+        if (headerRef.current) {
+          gsap.fromTo(
+            headerRef.current,
+            { autoAlpha: 0, y: 30, filter: 'blur(10px)' },
+            {
+              autoAlpha: 1,
+              y: 0,
+              filter: 'blur(0px)',
+              duration: 1.05,
+              ease: 'power3.out',
+              scrollTrigger: {
+                trigger: section,
+                start: 'top 78%',
+                once: true,
+              },
+            }
+          );
+        }
+
+        cards.forEach((card, index) => {
+          const config = floatConfigs[index];
+
+          gsap.set(card, {
+            autoAlpha: 0,
+            y: 48,
+            x: config.x,
+            scale: 0.92,
+            filter: 'blur(10px)',
+          });
+
+          gsap.to(card, {
+            autoAlpha: 1,
+            y: 0,
+            x: 0,
+            scale: 1,
+            filter: 'blur(0px)',
+            duration: 1,
+            delay: index * 0.08,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: section,
+              start: 'top 72%',
+              once: true,
+            },
+            onComplete: () => {
+              gsap.to(card, {
+                y: `-=${config.y}`,
+                x: `+=${config.x * 0.45}`,
+                duration: config.duration,
+                repeat: -1,
+                yoyo: true,
+                ease: 'sine.inOut',
+                delay: config.delay,
+              });
+            },
+          });
+        });
+      }, section);
+
+      cleanup = () => ctx.revert();
+    })();
+
+    return () => {
+      mounted = false;
+      cleanup();
     };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
@@ -195,27 +268,18 @@ export default function FloatingTestimonialsSection() {
       data-gsap-section="default"
       className="relative overflow-hidden py-32 sm:py-48 px-6 sm:px-10"
       style={{
-        background: 'linear-gradient(to bottom, #0A0C16 0%, #06060C 100%)',
+        background: 'linear-gradient(180deg, #020208 0%, #04040c 50%, #030309 100%)',
       }}
     >
-      {/* Background glow pool */}
       <div
+        ref={glowRef}
         className="absolute inset-0 pointer-events-none"
         style={{
           background: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(74,158,255,0.025) 0%, transparent 70%)',
-          opacity: sectionProgress,
         }}
       />
 
-      {/* Section header */}
-      <div
-        className="relative z-10 text-center mb-20"
-        style={{
-          opacity: sectionProgress > 0.05 ? 1 : 0,
-          transform: `translateY(${sectionProgress > 0.05 ? 0 : 24}px)`,
-          transition: 'all 1s cubic-bezier(0.16,1,0.3,1)',
-        }}
-      >
+      <div ref={headerRef} className="relative z-10 text-center mb-20">
         <div className="flex items-center justify-center gap-3 mb-6">
           <div className="h-px w-16" style={{ background: 'linear-gradient(90deg, transparent, rgba(201,169,110,0.3))' }} />
           <span className="text-[9px] tracking-[0.3em] uppercase" style={{ color: 'rgba(201,169,110,0.5)' }}>
@@ -242,7 +306,6 @@ export default function FloatingTestimonialsSection() {
         </h2>
       </div>
 
-      {/* Cards grid — masonry-like with different heights */}
       <div
         className="relative z-10 max-w-6xl mx-auto"
         style={{
@@ -252,68 +315,16 @@ export default function FloatingTestimonialsSection() {
           alignItems: 'start',
         }}
       >
-        {testimonials.map((item, i) => (
+        {testimonials.map((item, index) => (
           <TestimonialCard
-            key={i}
+            key={item.name}
             item={item}
-            index={i}
-            sectionProgress={sectionProgress as number}
+            setRef={(element) => {
+              cardRefs.current[index] = element;
+            }}
           />
         ))}
       </div>
-
-      {/* Aggregate rating row */}
-      <div
-        className="relative z-10 max-w-6xl mx-auto mt-20 flex flex-wrap items-center justify-center gap-8 sm:gap-16"
-        style={{
-          opacity: sectionProgress > 0.7 ? 1 : 0,
-          transform: `translateY(${sectionProgress > 0.7 ? 0 : 16}px)`,
-          transition: 'all 0.9s cubic-bezier(0.16,1,0.3,1) 0.4s',
-        }}
-      >
-        {[
-          { value: '98%', label: 'Client satisfaction' },
-          { value: '5.0', label: 'Average rating' },
-          { value: '300+', label: 'Happy brands' },
-        ].map((stat, i) => (
-          <div key={i} className="text-center">
-            <div
-              className="font-black"
-              style={{
-                fontSize: '2rem', letterSpacing: '-0.04em',
-                background: 'linear-gradient(135deg, #C9A96E, #f0d49a)',
-                WebkitBackgroundClip: 'text',
-                backgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              {stat.value}
-            </div>
-            <div className="text-[10px] tracking-widest uppercase mt-1" style={{ color: 'rgba(237,233,227,0.3)' }}>
-              {stat.label}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <style>{`
-        @keyframes float-card-0 {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50%       { transform: translateY(-8px) rotate(0.3deg); }
-        }
-        @keyframes float-card-1 {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50%       { transform: translateY(-6px) rotate(-0.2deg); }
-        }
-        @keyframes float-card-2 {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50%       { transform: translateY(-10px) rotate(0.4deg); }
-        }
-        @keyframes opacity-pulse {
-          0%, 100% { opacity: 0.7; }
-          50%       { opacity: 1; }
-        }
-      `}</style>
     </section>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const services = [
   {
@@ -21,7 +21,7 @@ const services = [
         <circle cx="12" cy="14.5" r="2.5" stroke="currentColor" strokeWidth="1.5" />
       </svg>
     ),
-    stats: [{ label: 'Avg. Views', value: '2.4M+' }, { label: 'Conversion Lift', value: '3×' }],
+    stats: [{ label: 'Avg. Views', value: '2.4M+' }, { label: 'Conversion Lift', value: '3x' }],
   },
   {
     id: 2,
@@ -40,7 +40,7 @@ const services = [
         <path d="M2 12l10 5 10-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
-    stats: [{ label: 'Assets / Week', value: '100+' }, { label: 'Cost vs. Shoot', value: '−70%' }],
+    stats: [{ label: 'Assets / Week', value: '100+' }, { label: 'Cost vs. Shoot', value: '-70%' }],
   },
   {
     id: 3,
@@ -58,450 +58,464 @@ const services = [
         <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
-    stats: [{ label: 'Conversion Lift', value: '+40%' }, { label: 'Return Rate Drop', value: '−25%' }],
+    stats: [{ label: 'Conversion Lift', value: '+40%' }, { label: 'Return Rate Drop', value: '-25%' }],
   },
 ];
 
-/* ─── Orbit ring ─── */
-function OrbitRing({ color, accentRgb, active }: { color: string; accentRgb: string; active: boolean }) {
-  return (
-    <div className="absolute inset-0 pointer-events-none" style={{
-      opacity: active ? 1 : 0,
-      transition: 'opacity 0.9s ease',
-    }}>
-      {/* Outer dashed */}
-      <div className="absolute top-1/2 left-1/2 rounded-full" style={{
-        width: '150%', height: '150%',
-        marginLeft: '-75%', marginTop: '-75%',
-        border: `1px dashed rgba(${accentRgb},0.12)`,
-        animation: 'orbit-spin 22s linear infinite',
-      }} />
-      {/* Mid solid */}
-      <div className="absolute top-1/2 left-1/2 rounded-full" style={{
-        width: '118%', height: '118%',
-        marginLeft: '-59%', marginTop: '-59%',
-        border: `1px solid rgba(${accentRgb},0.07)`,
-        animation: 'orbit-spin 14s linear infinite reverse',
-      }} />
-      {/* Orbiting dot */}
-      <div className="absolute top-1/2 left-1/2" style={{
-        width: '5px', height: '5px',
-        marginLeft: '-2.5px', marginTop: '-2.5px',
-        animation: 'orbit-dot 8s linear infinite',
-      }}>
-        <div style={{
-          width: '5px', height: '5px',
-          borderRadius: '50%',
-          background: color,
-          boxShadow: `0 0 10px ${color}, 0 0 20px rgba(${accentRgb},0.4)`,
-          transform: `translateX(calc(${active ? '1' : '0'} * 80px))`,
-          transition: 'transform 0.5s ease',
-        }} />
-      </div>
-    </div>
-  );
-}
+type Service = (typeof services)[number];
 
-/* ─── Background moving gradient mesh ─── */
 function BackgroundMesh() {
-  const ref = useRef<HTMLDivElement>(null);
-  const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
+  const hostRef = useRef<HTMLDivElement>(null);
+  const pointerGlowRef = useRef<HTMLDivElement>(null);
+  const ambientRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   useEffect(() => {
-    const handleMove = (e: MouseEvent) => {
-      setMousePos({ x: (e.clientX / window.innerWidth) * 100, y: (e.clientY / window.innerHeight) * 100 });
+    if (!hostRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    let mounted = true;
+    let cleanup = () => {};
+
+    void (async () => {
+      const { gsap } = await import('gsap');
+      if (!mounted || !hostRef.current) return;
+
+      const host = hostRef.current;
+      const pointerGlow = pointerGlowRef.current;
+      const ambients = ambientRefs.current.filter(Boolean) as HTMLDivElement[];
+
+      if (!pointerGlow) return;
+
+      const ctx = gsap.context(() => {
+        gsap.set(pointerGlow, {
+          xPercent: -50,
+          yPercent: -50,
+          x: host.clientWidth * 0.5,
+          y: host.clientHeight * 0.5,
+          autoAlpha: 0.38,
+        });
+
+        const xTo = gsap.quickTo(pointerGlow, 'x', { duration: 0.45, ease: 'power3.out' });
+        const yTo = gsap.quickTo(pointerGlow, 'y', { duration: 0.45, ease: 'power3.out' });
+
+        const handleMove = (event: MouseEvent) => {
+          const rect = host.getBoundingClientRect();
+          xTo(event.clientX - rect.left);
+          yTo(event.clientY - rect.top);
+        };
+
+        host.addEventListener('mousemove', handleMove, { passive: true });
+
+        ambients.forEach((ambient, index) => {
+          gsap.to(ambient, {
+            x: index === 0 ? 48 : index === 1 ? -54 : 34,
+            y: index === 0 ? -36 : index === 1 ? 26 : -44,
+            scale: index === 1 ? 1.12 : 1.08,
+            duration: 6 + index * 1.3,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut',
+          });
+        });
+
+        cleanup = () => {
+          host.removeEventListener('mousemove', handleMove);
+        };
+      }, host);
+
+      const previousCleanup = cleanup;
+      cleanup = () => {
+        previousCleanup();
+        ctx.revert();
+      };
+    })();
+
+    return () => {
+      mounted = false;
+      cleanup();
     };
-    window.addEventListener('mousemove', handleMove, { passive: true });
-    return () => window.removeEventListener('mousemove', handleMove);
   }, []);
 
   return (
-    <div ref={ref} className="absolute inset-0 pointer-events-none overflow-hidden">
-      {/* Moving gold gradient following cursor */}
-      <div className="absolute inset-0" style={{
-        background: `radial-gradient(ellipse 60% 50% at ${mousePos.x}% ${mousePos.y}%, rgba(201,169,110,0.025) 0%, transparent 65%)`,
-        transition: 'all 1.2s cubic-bezier(0.25,0.46,0.45,0.94)',
-      }} />
-      {/* Static ambient glows */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full" style={{
-        background: 'radial-gradient(circle, rgba(201,169,110,0.03) 0%, transparent 70%)',
-        filter: 'blur(60px)',
-        animation: 'mesh-drift-a 18s ease-in-out infinite',
-      }} />
-      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full" style={{
-        background: 'radial-gradient(circle, rgba(74,158,255,0.025) 0%, transparent 70%)',
-        filter: 'blur(50px)',
-        animation: 'mesh-drift-b 22s ease-in-out infinite 3s',
-      }} />
-      <div className="absolute top-2/3 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full" style={{
-        background: 'radial-gradient(circle, rgba(139,92,246,0.02) 0%, transparent 70%)',
-        filter: 'blur(40px)',
-        animation: 'mesh-drift-c 16s ease-in-out infinite 6s',
-      }} />
-      {/* Horizontal light streaks */}
-      {[15, 40, 65, 85].map((top, i) => (
-        <div key={i} className="absolute left-0 right-0 pointer-events-none" style={{
-          top: `${top}%`, height: '1px',
-          background: 'linear-gradient(90deg, transparent 0%, rgba(201,169,110,0.04) 30%, rgba(201,169,110,0.08) 50%, rgba(201,169,110,0.04) 70%, transparent 100%)',
-          animation: `streak-drift ${6 + i * 2}s ease-in-out infinite`,
-          animationDelay: `${i * 1.5}s`,
-        }} />
+    <div ref={hostRef} className="absolute inset-0 pointer-events-none overflow-hidden">
+      <div
+        ref={pointerGlowRef}
+        className="absolute h-[28rem] w-[28rem] rounded-full"
+        style={{
+          background: 'radial-gradient(circle, rgba(201,169,110,0.08) 0%, rgba(201,169,110,0.02) 35%, transparent 70%)',
+          filter: 'blur(34px)',
+        }}
+      />
+
+      {[
+        {
+          className: 'top-[10%] left-[8%] h-80 w-80',
+          background: 'radial-gradient(circle, rgba(201,169,110,0.05) 0%, transparent 72%)',
+        },
+        {
+          className: 'bottom-[10%] right-[10%] h-72 w-72',
+          background: 'radial-gradient(circle, rgba(74,158,255,0.045) 0%, transparent 72%)',
+        },
+        {
+          className: 'top-[55%] left-[48%] h-60 w-60 -translate-x-1/2',
+          background: 'radial-gradient(circle, rgba(139,92,246,0.04) 0%, transparent 72%)',
+        },
+      ].map((ambient, index) => (
+        <div
+          key={index}
+          ref={(element) => {
+            ambientRefs.current[index] = element;
+          }}
+          className={`absolute rounded-full ${ambient.className}`}
+          style={{
+            background: ambient.background,
+            filter: 'blur(40px)',
+          }}
+        />
       ))}
-      {/* Dot constellation */}
-      {Array.from({ length: 20 }, (_, i) => ({
-        x: `${(i * 7.3 + 5) % 95}%`,
-        y: `${(i * 11.7 + 8) % 88}%`,
-        size: i % 5 === 0 ? 2 : 1,
-        delay: i * 0.35,
-      })).map((d, i) => (
-        <div key={i} className="absolute rounded-full" style={{
-          left: d.x, top: d.y,
-          width: d.size, height: d.size,
-          background: i % 3 === 0 ? 'rgba(201,169,110,0.25)' : i % 3 === 1 ? 'rgba(74,158,255,0.2)' : 'rgba(107,107,128,0.18)',
-          animation: `dot-float ${5 + (i % 4)}s ease-in-out infinite`,
-          animationDelay: `${d.delay}s`,
-        }} />
-      ))}
+
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(to bottom, rgba(6,6,14,0.5) 0%, transparent 16%, transparent 84%, rgba(6,6,14,0.42) 100%)',
+        }}
+      />
     </div>
   );
 }
 
-/* ─── Reveal helper: wraps a child with scroll-triggered fade+slide ─── */
-function Reveal({
-  children,
-  delay = 0,
-  revealed,
-  from = 'bottom',
-  distance = 28,
-  duration = 900,
+function ServiceCard({
+  service,
+  isActive,
+  onHover,
+  setRef,
 }: {
-  children: React.ReactNode;
-  delay?: number;
-  revealed: boolean;
-  from?: 'bottom' | 'left' | 'right' | 'scale';
-  distance?: number;
-  duration?: number;
-}) {
-  const hiddenTransform =
-    from === 'bottom' ? `translateY(${distance}px)`
-    : from === 'left' ? `translateX(-${distance}px)`
-    : from === 'right' ? `translateX(${distance}px)`
-    : `scale(0.88) translateY(${distance * 0.5}px)`;
-
-  return (
-    <div style={{
-      opacity: revealed ? 1 : 0,
-      transform: revealed ? 'translateY(0) translateX(0) scale(1)' : hiddenTransform,
-      filter: revealed ? 'blur(0px)' : 'blur(4px)',
-      transition: `opacity ${duration}ms cubic-bezier(0.16,1,0.3,1) ${delay}ms,
-                   transform ${duration}ms cubic-bezier(0.16,1,0.3,1) ${delay}ms,
-                   filter ${duration * 0.8}ms ease ${delay}ms`,
-    }}>
-      {children}
-    </div>
-  );
-}
-
-/* ─── Enhanced Magnetic Card ─── */
-function ServiceCard({ service, index, isActive, onHover }: {
-  service: typeof services[0];
-  index: number;
+  service: Service;
   isActive: boolean;
   onHover: (id: number | null) => void;
+  setRef: (element: HTMLDivElement | null) => void;
 }) {
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
-  const [glowXY, setGlowXY] = useState({ x: 50, y: 50 });
-  const [entryState, setEntryState] = useState<'hidden' | 'entering' | 'visible'>('hidden');
-  // Per-element reveal stages — each fires with its own delay after card enters
-  const [revealStage, setRevealStage] = useState(0);
-  const animFrame = useRef<number>(0);
+  const glowRef = useRef<HTMLDivElement>(null);
+  const ringsRef = useRef<HTMLDivElement>(null);
+  const orbitRef = useRef<HTMLDivElement>(null);
+  const gsapRef = useRef<typeof import('gsap').gsap | null>(null);
+  const rotateXToRef = useRef<((value: number) => unknown) | null>(null);
+  const rotateYToRef = useRef<((value: number) => unknown) | null>(null);
+  const glowXToRef = useRef<((value: number) => unknown) | null>(null);
+  const glowYToRef = useRef<((value: number) => unknown) | null>(null);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && entryState === 'hidden') {
-          const cardDelay = index * 220;
-          setTimeout(() => setEntryState('entering'), cardDelay);
-          setTimeout(() => setEntryState('visible'), cardDelay + 1000);
-          // Stage the inner element reveals after the card shell arrives
-          const stageBase = cardDelay + 300;
-          setTimeout(() => setRevealStage(1), stageBase);          // tag + number
-          setTimeout(() => setRevealStage(2), stageBase + 160);    // icon
-          setTimeout(() => setRevealStage(3), stageBase + 340);    // title
-          setTimeout(() => setRevealStage(4), stageBase + 520);    // description
-          setTimeout(() => setRevealStage(5), stageBase + 720);    // stats
-          setTimeout(() => setRevealStage(6), stageBase + 920);    // detail + arrow + bar
-        }
-      },
-      { threshold: 0.08 }
-    );
-    if (wrapRef.current) observer.observe(wrapRef.current);
-    return () => observer.disconnect();
-  }, [index, entryState]);
+    if (!cardRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const dx = e.clientX - cx;
-    const dy = e.clientY - cy;
-    setTilt({ x: (dy / rect.height) * 10, y: (dx / rect.width) * -10 });
-    setGlowXY({
-      x: ((e.clientX - rect.left) / rect.width) * 100,
-      y: ((e.clientY - rect.top) / rect.height) * 100,
-    });
+    let mounted = true;
+    let cleanup = () => {};
+
+    void (async () => {
+      const { gsap } = await import('gsap');
+      if (!mounted || !cardRef.current) return;
+
+      gsapRef.current = gsap;
+
+      const card = cardRef.current;
+      const glow = glowRef.current;
+
+      if (!glow) return;
+
+      const ctx = gsap.context(() => {
+        gsap.set(card, { transformPerspective: 1200, transformOrigin: '50% 50%' });
+        gsap.set(glow, {
+          xPercent: -50,
+          yPercent: -50,
+          x: card.clientWidth * 0.5,
+          y: card.clientHeight * 0.5,
+          autoAlpha: 0.48,
+        });
+
+        if (ringsRef.current) {
+          gsap.to(ringsRef.current.children[0], {
+            rotation: 360,
+            transformOrigin: '50% 50%',
+            ease: 'none',
+            repeat: -1,
+            duration: 22,
+          });
+
+          gsap.to(ringsRef.current.children[1], {
+            rotation: -360,
+            transformOrigin: '50% 50%',
+            ease: 'none',
+            repeat: -1,
+            duration: 16,
+          });
+        }
+
+        if (orbitRef.current) {
+          gsap.to(orbitRef.current, {
+            rotation: 360,
+            transformOrigin: '50% 50%',
+            ease: 'none',
+            repeat: -1,
+            duration: 8,
+          });
+        }
+
+        rotateXToRef.current = gsap.quickTo(card, 'rotationX', {
+          duration: 0.36,
+          ease: 'power3.out',
+        });
+        rotateYToRef.current = gsap.quickTo(card, 'rotationY', {
+          duration: 0.36,
+          ease: 'power3.out',
+        });
+        glowXToRef.current = gsap.quickTo(glow, 'x', {
+          duration: 0.28,
+          ease: 'power3.out',
+        });
+        glowYToRef.current = gsap.quickTo(glow, 'y', {
+          duration: 0.28,
+          ease: 'power3.out',
+        });
+      }, card);
+
+      cleanup = () => ctx.revert();
+    })();
+
+    return () => {
+      mounted = false;
+      cleanup();
+    };
   }, []);
 
-  const handleMouseLeave = useCallback(() => {
-    onHover(null);
-    cancelAnimationFrame(animFrame.current);
-    const spring = () => {
-      setTilt(prev => {
-        const nx = prev.x * 0.75;
-        const ny = prev.y * 0.75;
-        if (Math.abs(nx) < 0.01 && Math.abs(ny) < 0.01) return { x: 0, y: 0 };
-        animFrame.current = requestAnimationFrame(spring);
-        return { x: nx, y: ny };
-      });
-    };
-    animFrame.current = requestAnimationFrame(spring);
-  }, [onHover]);
+  useEffect(() => {
+    const gsap = gsapRef.current;
+    if (!gsap || !cardRef.current) return;
 
-  const entryTransform = () => {
-    if (entryState === 'hidden') return `translateY(80px) scale(0.90)`;
-    return `translateY(0px) scale(1)`;
+    gsap.to(cardRef.current, {
+      y: isActive ? -14 : 0,
+      scale: isActive ? 1.02 : 1,
+      duration: 0.42,
+      ease: 'power3.out',
+    });
+
+    if (ringsRef.current) {
+      gsap.to(ringsRef.current, {
+        autoAlpha: isActive ? 1 : 0.22,
+        scale: isActive ? 1 : 0.96,
+        duration: 0.42,
+        ease: 'power3.out',
+      });
+    }
+  }, [isActive]);
+
+  const handleMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+
+    onHover(service.id);
+
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const percentX = x / rect.width - 0.5;
+    const percentY = y / rect.height - 0.5;
+
+    rotateXToRef.current?.(-percentY * 10);
+    rotateYToRef.current?.(percentX * 12);
+    glowXToRef.current?.(x);
+    glowYToRef.current?.(y);
   };
 
-  const r = (stage: number) => revealStage >= stage;
+  const handleLeave = () => {
+    onHover(null);
+    rotateXToRef.current?.(0);
+    rotateYToRef.current?.(0);
+    if (cardRef.current) {
+      glowXToRef.current?.(cardRef.current.clientWidth * 0.5);
+      glowYToRef.current?.(cardRef.current.clientHeight * 0.5);
+    }
+  };
 
   return (
     <div
-      ref={wrapRef}
-      className="relative"
-      style={{
-        opacity: entryState === 'hidden' ? 0 : 1,
-        filter: entryState === 'hidden' ? 'blur(12px)' : 'blur(0px)',
-        transform: entryTransform(),
-        transition: `opacity 1.1s cubic-bezier(0.16,1,0.3,1) ${index * 220}ms,
-                     transform 1.3s cubic-bezier(0.16,1,0.3,1) ${index * 220}ms,
-                     filter 1s ease ${index * 220}ms`,
-        animation: entryState === 'visible' ? `card-float ${7 + index * 1.3}s ease-in-out infinite` : 'none',
-        animationDelay: `${index * 0.9}s`,
+      ref={(element) => {
+        wrapperRef.current = element;
+        setRef(element);
       }}
+      className="relative"
       onMouseEnter={() => onHover(service.id)}
-      onMouseLeave={handleMouseLeave}
-      onMouseMove={handleMouseMove}
+      onMouseMove={handleMove}
+      onMouseLeave={handleLeave}
     >
       <div
         ref={cardRef}
-        className="relative overflow-hidden rounded-[32px] flex flex-col h-full cursor-default"
+        className="relative h-full overflow-hidden rounded-[32px] p-8"
         style={{
           background: isActive
-            ? `linear-gradient(145deg, rgba(${service.accentRgb},0.08) 0%, rgba(8,8,18,0.97) 45%, rgba(6,6,14,0.99) 100%)`
+            ? `linear-gradient(145deg, rgba(${service.accentRgb},0.1) 0%, rgba(8,8,18,0.98) 44%, rgba(6,6,14,0.99) 100%)`
             : 'rgba(9,9,18,0.93)',
           border: isActive
             ? `1px solid rgba(${service.accentRgb},0.28)`
             : '1px solid rgba(22,22,38,1)',
           boxShadow: isActive
-            ? `0 0 0 1px rgba(${service.accentRgb},0.06),
-               0 0 60px rgba(${service.accentRgb},0.14),
-               0 30px 80px rgba(0,0,0,0.7),
-               inset 0 1px 0 rgba(${service.accentRgb},0.14),
-               inset 0 -1px 0 rgba(${service.accentRgb},0.05),
-               inset 1px 0 0 rgba(${service.accentRgb},0.04)`
-            : `0 4px 30px rgba(0,0,0,0.5),
-               inset 0 1px 0 rgba(255,255,255,0.025),
-               inset 0 -1px 0 rgba(0,0,0,0.3)`,
-          transform: `perspective(1100px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
-          transition: isActive
-            ? 'background 0.9s ease, border-color 0.7s ease, box-shadow 0.9s ease, transform 0.16s ease'
-            : 'background 0.7s ease, border-color 0.6s ease, box-shadow 0.7s ease, transform 0.4s cubic-bezier(0.16,1,0.3,1)',
+            ? `0 28px 80px rgba(0,0,0,0.72), 0 0 0 1px rgba(${service.accentRgb},0.08), inset 0 1px 0 rgba(${service.accentRgb},0.16)`
+            : '0 12px 42px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.025)',
+          willChange: 'transform',
         }}
       >
-        {/* Cursor-follow glow */}
-        <div className="absolute inset-0 pointer-events-none z-0 rounded-[32px] overflow-hidden">
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: isActive
-              ? `radial-gradient(circle 200px at ${glowXY.x}% ${glowXY.y}%, rgba(${service.accentRgb},0.09) 0%, transparent 70%)`
-              : 'none',
-            transition: 'background 0.12s ease',
-          }} />
+        <div ref={ringsRef} className="pointer-events-none absolute inset-0">
+          <div
+            className="absolute left-1/2 top-1/2 rounded-full"
+            style={{
+              width: '150%',
+              height: '150%',
+              marginLeft: '-75%',
+              marginTop: '-75%',
+              border: `1px dashed rgba(${service.accentRgb},0.14)`,
+            }}
+          />
+          <div
+            className="absolute left-1/2 top-1/2 rounded-full"
+            style={{
+              width: '118%',
+              height: '118%',
+              marginLeft: '-59%',
+              marginTop: '-59%',
+              border: `1px solid rgba(${service.accentRgb},0.08)`,
+            }}
+          />
+          <div ref={orbitRef} className="absolute inset-0">
+            <div
+              className="absolute left-1/2 top-[11%] h-[6px] w-[6px] -translate-x-1/2 rounded-full"
+              style={{
+                background: service.accent,
+                boxShadow: `0 0 12px ${service.accent}, 0 0 26px rgba(${service.accentRgb},0.35)`,
+              }}
+            />
+          </div>
         </div>
 
-        {/* Orbit rings */}
-        <OrbitRing color={service.accent} accentRgb={service.accentRgb} active={isActive} />
+        <div
+          ref={glowRef}
+          className="pointer-events-none absolute h-48 w-48 rounded-full"
+          style={{
+            background: `radial-gradient(circle, rgba(${service.accentRgb},0.18) 0%, rgba(${service.accentRgb},0.04) 38%, transparent 74%)`,
+            filter: 'blur(14px)',
+          }}
+        />
 
-        {/* Glass noise */}
-        <div className="absolute inset-0 pointer-events-none z-0 rounded-[32px] opacity-20"
-          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E")` }} />
+        <div
+          className="pointer-events-none absolute inset-0 rounded-[32px]"
+          style={{
+            background:
+              'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.85\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\' opacity=\'0.04\'/%3E%3C/svg%3E")',
+            opacity: 0.18,
+          }}
+        />
 
-        {/* Top edge highlight */}
-        <div className="absolute top-0 left-0 right-0 pointer-events-none z-10" style={{
-          height: '1px',
-          background: isActive
-            ? `linear-gradient(90deg, transparent 5%, rgba(${service.accentRgb},0.45) 30%, rgba(255,255,255,0.12) 50%, rgba(${service.accentRgb},0.45) 70%, transparent 95%)`
-            : 'linear-gradient(90deg, transparent 10%, rgba(255,255,255,0.04) 50%, transparent 90%)',
-          transition: 'all 0.8s ease',
-        }} />
-
-        {/* Inner conic gradient */}
-        <div className="absolute inset-0 pointer-events-none z-0 rounded-[32px] overflow-hidden">
-          <div style={{
-            position: 'absolute', inset: '-50%',
-            width: '200%', height: '200%',
-            background: `conic-gradient(from ${isActive ? '120deg' : '0deg'} at 50% 50%,
-              rgba(${service.accentRgb},0.02) 0deg, transparent 60deg,
-              rgba(${service.accentRgb},0.015) 120deg, transparent 180deg,
-              rgba(${service.accentRgb},0.02) 240deg, transparent 300deg,
-              rgba(${service.accentRgb},0.02) 360deg)`,
-            animation: isActive ? 'inner-conic-spin 12s linear infinite' : 'none',
-            transition: 'all 0.8s ease',
-          }} />
-        </div>
-
-        {/* Shimmer sweep */}
-        <div className="absolute inset-0 pointer-events-none z-0 rounded-[32px] overflow-hidden">
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: `linear-gradient(110deg, transparent 25%, rgba(${service.accentRgb},0.05) 45%, rgba(255,255,255,0.03) 50%, rgba(${service.accentRgb},0.05) 55%, transparent 75%)`,
-            backgroundSize: '250% 100%',
-            animation: isActive ? 'shimmer-sweep 2.8s ease infinite' : 'none',
-          }} />
-        </div>
-
-        {/* ── Content with per-element reveals ── */}
-        <div className="relative z-10 p-8 flex flex-col h-full gap-6">
-
-          {/* Stage 1: Tag + Number */}
-          <Reveal revealed={r(1)} delay={0} from="bottom" distance={20} duration={800}>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold tracking-[0.22em] uppercase px-3 py-1.5 rounded-full" style={{
+        <div className="relative z-10 flex h-full flex-col gap-6">
+          <div className="flex items-center justify-between">
+            <span
+              className="rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.22em]"
+              style={{
                 color: service.accent,
                 background: `rgba(${service.accentRgb},${isActive ? '0.13' : '0.07'})`,
-                border: `1px solid rgba(${service.accentRgb},${isActive ? '0.28' : '0.15'})`,
-                boxShadow: isActive ? `0 0 18px rgba(${service.accentRgb},0.2), inset 0 1px 0 rgba(${service.accentRgb},0.15)` : 'none',
-                transition: 'all 0.6s ease',
-              }}>
-                {service.tag}
-              </span>
-              <span className="text-5xl font-black tracking-tighter tabular-nums" style={{
-                color: isActive ? service.accent : 'rgba(107,107,128,0.12)',
-                transition: 'color 0.7s ease, text-shadow 0.7s ease',
+                border: `1px solid rgba(${service.accentRgb},${isActive ? '0.28' : '0.14'})`,
+              }}
+            >
+              {service.tag}
+            </span>
+            <span
+              className="text-5xl font-black tracking-tighter"
+              style={{
+                color: isActive ? service.accent : 'rgba(107,107,128,0.14)',
                 lineHeight: 1,
-                textShadow: isActive ? `0 0 35px rgba(${service.accentRgb},0.45)` : 'none',
-              }}>
-                {service.number}
-              </span>
-            </div>
-          </Reveal>
+              }}
+            >
+              {service.number}
+            </span>
+          </div>
 
-          {/* Stage 2: Icon */}
-          <Reveal revealed={r(2)} delay={0} from="scale" distance={16} duration={900}>
-            <div className="w-13 h-13 rounded-2xl flex items-center justify-center relative" style={{
-              width: '52px', height: '52px',
+          <div
+            className="flex h-13 w-13 items-center justify-center rounded-2xl"
+            style={{
+              width: '52px',
+              height: '52px',
               background: `rgba(${service.accentRgb},${isActive ? '0.15' : '0.06'})`,
               color: isActive ? service.accent : 'var(--muted-foreground)',
               border: `1px solid rgba(${service.accentRgb},${isActive ? '0.3' : '0.08'})`,
-              transition: 'all 0.6s cubic-bezier(0.16,1,0.3,1)',
-              boxShadow: isActive
-                ? `0 0 24px rgba(${service.accentRgb},0.28), 0 0 60px rgba(${service.accentRgb},0.1), inset 0 1px 0 rgba(${service.accentRgb},0.2)`
-                : '0 2px 8px rgba(0,0,0,0.3)',
-              transform: isActive ? 'scale(1.08) translateY(-1px)' : 'scale(1)',
-            }}>
-              {service.icon}
-            </div>
-          </Reveal>
+              boxShadow: isActive ? `0 0 20px rgba(${service.accentRgb},0.18)` : 'none',
+            }}
+          >
+            {service.icon}
+          </div>
 
-          {/* Stage 3: Title */}
-          <Reveal revealed={r(3)} delay={0} from="left" distance={24} duration={950}>
-            <h3 className="text-[22px] font-extrabold tracking-tight text-foreground leading-tight">
-              {service.title}
-            </h3>
-          </Reveal>
+          <h3 className="text-[22px] font-extrabold tracking-tight text-foreground leading-tight">{service.title}</h3>
 
-          {/* Stage 4: Description */}
-          <Reveal revealed={r(4)} delay={0} from="bottom" distance={18} duration={1000}>
-            <p className="text-sm leading-[1.88] font-light flex-grow" style={{
-              color: isActive ? 'rgba(237,233,227,0.75)' : 'var(--muted-foreground)',
-              transition: 'color 0.6s ease',
-            }}>
-              {service.description}
-            </p>
-          </Reveal>
+          <p
+            className="flex-grow text-sm font-light leading-[1.88]"
+            style={{
+              color: isActive ? 'rgba(237,233,227,0.78)' : 'var(--muted-foreground)',
+            }}
+          >
+            {service.description}
+          </p>
 
-          {/* Stage 5: Stats */}
-          <Reveal revealed={r(5)} delay={0} from="bottom" distance={22} duration={1000}>
-            <div className="grid grid-cols-2 gap-3">
-              {service.stats.map((stat, si) => (
-                <div key={stat.label} className="rounded-2xl px-4 py-3 relative overflow-hidden" style={{
+          <div className="grid grid-cols-2 gap-3">
+            {service.stats.map((stat) => (
+              <div
+                key={stat.label}
+                className="rounded-2xl px-4 py-3"
+                style={{
                   background: isActive
-                    ? `linear-gradient(135deg, rgba(${service.accentRgb},0.09) 0%, rgba(${service.accentRgb},0.04) 100%)`
+                    ? `linear-gradient(135deg, rgba(${service.accentRgb},0.1) 0%, rgba(${service.accentRgb},0.04) 100%)`
                     : `rgba(${service.accentRgb},0.03)`,
-                  border: `1px solid rgba(${service.accentRgb},${isActive ? '0.2' : '0.07'})`,
-                  boxShadow: isActive ? `inset 0 1px 0 rgba(${service.accentRgb},0.12)` : 'none',
-                  transition: 'all 0.6s ease',
-                  transitionDelay: `${si * 40}ms`,
-                  /* Subtle stagger within stats */
-                  opacity: r(5) ? 1 : 0,
-                  transform: r(5) ? 'translateY(0)' : 'translateY(14px)',
-                }}>
-                  <p className="text-lg font-black tracking-tight" style={{
-                    color: isActive ? service.accent : 'var(--foreground)',
-                    textShadow: isActive ? `0 0 18px rgba(${service.accentRgb},0.4)` : 'none',
-                    transition: 'color 0.6s ease, text-shadow 0.6s ease',
-                  }}>
-                    {stat.value}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground font-medium tracking-wide mt-0.5">
-                    {stat.label}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </Reveal>
-
-          {/* Stage 6: Detail + Arrow */}
-          <Reveal revealed={r(6)} delay={0} from="right" distance={20} duration={900}>
-            <div className="flex items-center justify-between pt-1">
-              <p className="text-xs font-medium tracking-wide" style={{
-                color: isActive ? service.accent : 'rgba(107,107,128,0.35)',
-                transition: 'color 0.6s ease',
-              }}>
-                {service.detail}
-              </p>
-              <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{
-                background: isActive
-                  ? `linear-gradient(135deg, rgba(${service.accentRgb},0.2), rgba(${service.accentRgb},0.1))`
-                  : `rgba(${service.accentRgb},0.04)`,
-                border: `1px solid rgba(${service.accentRgb},${isActive ? '0.35' : '0.08'})`,
-                color: isActive ? service.accent : 'var(--muted-foreground)',
-                transform: isActive ? 'translateX(5px) scale(1.1)' : 'translateX(0) scale(1)',
-                boxShadow: isActive ? `0 0 16px rgba(${service.accentRgb},0.25)` : 'none',
-                transition: 'all 0.5s cubic-bezier(0.16,1,0.3,1)',
-              }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                  border: `1px solid rgba(${service.accentRgb},${isActive ? '0.2' : '0.08'})`,
+                }}
+              >
+                <p className="text-lg font-black tracking-tight" style={{ color: isActive ? service.accent : 'var(--foreground)' }}>
+                  {stat.value}
+                </p>
+                <p className="mt-0.5 text-[10px] font-medium tracking-wide text-muted-foreground">{stat.label}</p>
               </div>
-            </div>
-          </Reveal>
+            ))}
+          </div>
 
-          {/* Stage 6: Progress bar — draws in like a line */}
-          <div className="h-px rounded-full overflow-hidden" style={{
-            background: 'rgba(22,22,38,1)',
-            opacity: r(6) ? 1 : 0,
-            transition: 'opacity 0.6s ease',
-          }}>
-            <div className="h-full rounded-full" style={{
-              width: isActive ? '100%' : r(6) ? '30%' : '0%',
-              background: `linear-gradient(90deg, transparent 0%, rgba(${service.accentRgb},0.4) 20%, ${service.accent} 50%, rgba(${service.accentRgb},0.4) 80%, transparent 100%)`,
-              boxShadow: isActive ? `0 0 8px rgba(${service.accentRgb},0.5)` : 'none',
-              transition: 'width 1.4s cubic-bezier(0.16,1,0.3,1), box-shadow 0.6s ease',
-            }} />
+          <div className="flex items-center justify-between pt-1">
+            <p
+              className="text-xs font-medium tracking-wide"
+              style={{
+                color: isActive ? service.accent : 'rgba(107,107,128,0.35)',
+              }}
+            >
+              {service.detail}
+            </p>
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-full"
+              style={{
+                background: isActive
+                  ? `linear-gradient(135deg, rgba(${service.accentRgb},0.22), rgba(${service.accentRgb},0.1))`
+                  : `rgba(${service.accentRgb},0.04)`,
+                border: `1px solid rgba(${service.accentRgb},${isActive ? '0.34' : '0.08'})`,
+                color: isActive ? service.accent : 'var(--muted-foreground)',
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </div>
+
+          <div className="h-px overflow-hidden rounded-full" style={{ background: 'rgba(22,22,38,1)' }}>
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: isActive ? '100%' : '36%',
+                background: `linear-gradient(90deg, transparent 0%, rgba(${service.accentRgb},0.4) 20%, ${service.accent} 50%, rgba(${service.accentRgb},0.4) 80%, transparent 100%)`,
+                boxShadow: isActive ? `0 0 8px rgba(${service.accentRgb},0.45)` : 'none',
+                transition: 'width 0.7s cubic-bezier(0.16,1,0.3,1), box-shadow 0.4s ease',
+              }}
+            />
           </div>
         </div>
       </div>
@@ -512,216 +526,229 @@ function ServiceCard({ service, index, isActive, onHover }: {
 export default function ServicesSection() {
   const [hovered, setHovered] = useState<number | null>(null);
   const [activeAccordion, setActiveAccordion] = useState<number | null>(null);
-  const headingRef = useRef<HTMLDivElement>(null);
-  const [headingVisible, setHeadingVisible] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setHeadingVisible(true); },
-      { threshold: 0.15 }
-    );
-    if (headingRef.current) observer.observe(headingRef.current);
-    return () => observer.disconnect();
+    if (!sectionRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    let mounted = true;
+    let cleanup = () => {};
+
+    void (async () => {
+      const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+        import('gsap'),
+        import('gsap/ScrollTrigger'),
+      ]);
+
+      if (!mounted || !sectionRef.current) return;
+
+      gsap.registerPlugin(ScrollTrigger);
+
+      const section = sectionRef.current;
+      const cards = cardRefs.current.filter(Boolean) as HTMLDivElement[];
+
+      const ctx = gsap.context(() => {
+        if (headerRef.current) {
+          gsap.fromTo(
+            Array.from(headerRef.current.children),
+            {
+              autoAlpha: 0,
+              y: 26,
+              filter: 'blur(10px)',
+            },
+            {
+              autoAlpha: 1,
+              y: 0,
+              filter: 'blur(0px)',
+              duration: 1,
+              stagger: 0.08,
+              ease: 'power3.out',
+              scrollTrigger: {
+                trigger: section,
+                start: 'top 78%',
+                once: true,
+              },
+            }
+          );
+        }
+
+        gsap.fromTo(
+          cards,
+          {
+            autoAlpha: 0,
+            y: 52,
+            scale: 0.96,
+            filter: 'blur(12px)',
+          },
+          {
+            autoAlpha: 1,
+            y: 0,
+            scale: 1,
+            filter: 'blur(0px)',
+            duration: 1.05,
+            stagger: 0.1,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: section,
+              start: 'top 68%',
+              once: true,
+            },
+          }
+        );
+      }, section);
+
+      cleanup = () => ctx.revert();
+    })();
+
+    return () => {
+      mounted = false;
+      cleanup();
+    };
   }, []);
 
   return (
-    <section id="services" data-gsap-section="default" className="relative py-16 sm:py-24 px-6 sm:px-10 overflow-hidden" style={{
-      background: 'linear-gradient(to bottom, #06060E 0%, #080812 30%, #07071040 60%, var(--background) 100%)',
-    }}>
-
-      {/* Moving gradient background mesh */}
+    <section
+      ref={sectionRef}
+      id="services"
+      data-gsap-section="default"
+      className="relative overflow-hidden px-6 py-16 sm:px-10 sm:py-24"
+      style={{
+        background: 'linear-gradient(180deg, #020208 0%, #04040c 50%, #030309 100%)',
+      }}
+    >
       <BackgroundMesh />
 
-      {/* Edge vignette */}
-      <div className="absolute inset-0 pointer-events-none" style={{
-        background: 'linear-gradient(to bottom, rgba(6,6,14,0.5) 0%, transparent 15%, transparent 85%, rgba(6,6,14,0.4) 100%)',
-      }} />
-
-      <div className="relative z-10 max-w-7xl mx-auto">
-        {/* ── Header ── */}
-        <div ref={headingRef} className="mb-12">
-          <div className="inline-flex items-center gap-2.5 mb-6" style={{
-            opacity: headingVisible ? 1 : 0,
-            transform: headingVisible ? 'translateY(0) scaleX(1)' : 'translateY(16px) scaleX(0.9)',
-            transformOrigin: 'left center',
-            transition: 'opacity 1s cubic-bezier(0.16,1,0.3,1), transform 1s cubic-bezier(0.16,1,0.3,1)',
-          }}>
-            <div style={{
-              width: headingVisible ? '24px' : '0px',
-              height: '1px',
-              background: 'rgba(201,169,110,0.6)',
-              transition: 'width 1.2s cubic-bezier(0.16,1,0.3,1) 0.2s',
-            }} />
-            <span className="text-[10px] font-bold tracking-[0.25em] uppercase" style={{ color: 'rgba(201,169,110,0.8)' }}>
+      <div className="relative z-10 mx-auto max-w-7xl">
+        <div ref={headerRef} className="mb-12">
+          <div className="mb-6 inline-flex items-center gap-2.5">
+            <div style={{ width: '24px', height: '1px', background: 'rgba(201,169,110,0.6)' }} />
+            <span className="text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: 'rgba(201,169,110,0.8)' }}>
               What We Create
             </span>
           </div>
 
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-            {/* Title with word-by-word reveal */}
-            <h2 className="text-[clamp(1.5rem,5vw,3rem)] font-black tracking-tighter leading-[0.95] max-w-xl overflow-hidden">
-              {['Services', 'Built', 'for'].map((word, i) => (
-                <span key={word} className="inline-block overflow-hidden mr-[0.22em]">
-                  <span style={{
-                    display: 'inline-block',
-                    color: 'var(--foreground)',
-                    opacity: headingVisible ? 1 : 0,
-                    transform: headingVisible ? 'translateY(0)' : 'translateY(100%)',
-                    transition: `opacity 0.8s cubic-bezier(0.16,1,0.3,1) ${200 + i * 100}ms,
-                                 transform 0.9s cubic-bezier(0.16,1,0.3,1) ${200 + i * 100}ms`,
-                  }}>{word}</span>
-                </span>
-              ))}{' '}
-              <span className="inline-block overflow-hidden">
-                <span style={{
-                  display: 'inline-block',
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <h2 className="max-w-xl text-[clamp(1.5rem,5vw,3rem)] font-black leading-[0.95] tracking-tighter">
+              <span style={{ color: 'var(--foreground)' }}>Our  </span>
+              <span
+                style={{
                   background: 'linear-gradient(135deg, #B8935A 0%, #E8D4A0 45%, #D4B87A 75%, #C9A96E 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
-                  opacity: headingVisible ? 1 : 0,
-                  transform: headingVisible ? 'translateY(0)' : 'translateY(100%)',
-                  transition: `opacity 0.9s cubic-bezier(0.16,1,0.3,1) 550ms,
-                               transform 1s cubic-bezier(0.16,1,0.3,1) 550ms`,
-                  filter: headingVisible ? 'blur(0px)' : 'blur(6px)',
-                }}>Modern Beauty</span>
+                }}
+              >
+                Services.
               </span>
             </h2>
 
-            <p className="text-sm text-muted-foreground font-light max-w-xs leading-[1.8] md:text-right" style={{
-              opacity: headingVisible ? 1 : 0,
-              transform: headingVisible ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'opacity 1s ease 400ms, transform 1s ease 400ms',
-            }}>
+            <p className="max-w-xs text-sm font-light leading-[1.8] text-muted-foreground md:text-right">
               Three core disciplines that transform how luxury brands produce and distribute visual content.
             </p>
           </div>
         </div>
 
-        {/* ── Desktop: 3-col cards ── */}
-        <div className="hidden md:grid grid-cols-3 gap-6">
-          {services.map((service, i) => (
+        <div className="hidden grid-cols-3 gap-6 md:grid">
+          {services.map((service, index) => (
             <ServiceCard
               key={service.id}
               service={service}
-              index={i}
               isActive={hovered === service.id}
               onHover={setHovered}
+              setRef={(element) => {
+                cardRefs.current[index] = element;
+              }}
             />
           ))}
         </div>
 
-        {/* ── Mobile: Accordion ── */}
-        <div className="md:hidden flex flex-col gap-3">
-          {services.map((service, i) => (
-            <div key={service.id} className="rounded-[24px] overflow-hidden border transition-all duration-700" style={{
-              borderColor: activeAccordion === service.id ? `${service.accent}25` : 'var(--border)',
-              background: activeAccordion === service.id
-                ? `linear-gradient(145deg, rgba(${service.accentRgb},0.06) 0%, var(--card) 100%)`
-                : 'var(--card)',
-            }}>
+        <div className="flex flex-col gap-3 md:hidden">
+          {services.map((service) => (
+            <div
+              key={service.id}
+              className="overflow-hidden rounded-[24px] border transition-all duration-700"
+              style={{
+                borderColor: activeAccordion === service.id ? `${service.accent}25` : 'var(--border)',
+                background:
+                  activeAccordion === service.id
+                    ? `linear-gradient(145deg, rgba(${service.accentRgb},0.06) 0%, var(--card) 100%)`
+                    : 'var(--card)',
+              }}
+            >
               <button
                 onClick={() => setActiveAccordion(activeAccordion === service.id ? null : service.id)}
-                className="w-full flex items-center justify-between p-5 text-left gap-4"
+                className="flex w-full items-center justify-between gap-4 p-5 text-left"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0" style={{
-                    background: `rgba(${service.accentRgb},0.12)`,
-                    color: service.accent,
-                    border: `1px solid rgba(${service.accentRgb},0.2)`,
-                  }}>
+                  <div
+                    className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl"
+                    style={{
+                      background: `rgba(${service.accentRgb},0.12)`,
+                      color: service.accent,
+                      border: `1px solid rgba(${service.accentRgb},0.2)`,
+                    }}
+                  >
                     {service.icon}
                   </div>
                   <div>
-                    <span className="text-[9px] font-bold tracking-[0.22em] uppercase block mb-0.5" style={{ color: service.accent }}>
+                    <span className="mb-0.5 block text-[9px] font-bold uppercase tracking-[0.22em]" style={{ color: service.accent }}>
                       {service.number} · {service.tag}
                     </span>
                     <h3 className="text-base font-bold tracking-tight text-foreground">{service.title}</h3>
                   </div>
                 </div>
-                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{
-                  background: `rgba(${service.accentRgb},0.08)`,
-                  border: `1px solid rgba(${service.accentRgb},0.15)`,
-                  color: service.accent,
-                  transform: activeAccordion === service.id ? 'rotate(45deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.5s cubic-bezier(0.16,1,0.3,1)',
-                }}>
+                <div
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full"
+                  style={{
+                    background: `rgba(${service.accentRgb},0.08)`,
+                    border: `1px solid rgba(${service.accentRgb},0.15)`,
+                    color: service.accent,
+                    transform: activeAccordion === service.id ? 'rotate(45deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.45s cubic-bezier(0.16,1,0.3,1)',
+                  }}
+                >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                     <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                   </svg>
                 </div>
               </button>
 
-              <div className="overflow-hidden transition-all duration-700 ease-in-out" style={{
-                maxHeight: activeAccordion === service.id ? '300px' : '0',
-              }}>
-                <div className="px-5 pb-5 flex flex-col gap-4">
-                  <p className="text-sm text-muted-foreground leading-[1.8] font-light">{service.description}</p>
+              <div
+                className="overflow-hidden transition-all duration-700 ease-in-out"
+                style={{
+                  maxHeight: activeAccordion === service.id ? '320px' : '0',
+                }}
+              >
+                <div className="flex flex-col gap-4 px-5 pb-5">
+                  <p className="text-sm font-light leading-[1.8] text-muted-foreground">{service.description}</p>
                   <div className="grid grid-cols-2 gap-2">
                     {service.stats.map((stat) => (
-                      <div key={stat.label} className="rounded-xl px-3 py-2.5" style={{
-                        background: `rgba(${service.accentRgb},0.07)`,
-                        border: `1px solid rgba(${service.accentRgb},0.15)`,
-                      }}>
-                        <p className="text-base font-black" style={{ color: service.accent }}>{stat.value}</p>
-                        <p className="text-[10px] text-muted-foreground font-medium tracking-wide">{stat.label}</p>
+                      <div
+                        key={stat.label}
+                        className="rounded-xl px-3 py-2.5"
+                        style={{
+                          background: `rgba(${service.accentRgb},0.07)`,
+                          border: `1px solid rgba(${service.accentRgb},0.15)`,
+                        }}
+                      >
+                        <p className="text-base font-black" style={{ color: service.accent }}>
+                          {stat.value}
+                        </p>
+                        <p className="text-[10px] font-medium tracking-wide text-muted-foreground">{stat.label}</p>
                       </div>
                     ))}
                   </div>
-                  <p className="text-xs font-medium tracking-wide" style={{ color: service.accent }}>{service.detail}</p>
+                  <p className="text-xs font-medium tracking-wide" style={{ color: service.accent }}>
+                    {service.detail}
+                  </p>
                 </div>
               </div>
             </div>
           ))}
         </div>
       </div>
-
-      <style>{`
-        @keyframes card-float {
-          0%, 100% { transform: translateY(0px); }
-          30% { transform: translateY(-10px); }
-          60% { transform: translateY(-5px); }
-          80% { transform: translateY(-14px); }
-        }
-        @keyframes orbit-spin {
-          from { transform: translate(-50%, -50%) rotate(0deg); }
-          to   { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-        @keyframes orbit-dot {
-          from { transform: translate(-50%, -50%) rotate(0deg) translateX(90px); }
-          to   { transform: translate(-50%, -50%) rotate(360deg) translateX(90px); }
-        }
-        @keyframes shimmer-sweep {
-          0%   { background-position: 250% 0; }
-          100% { background-position: -250% 0; }
-        }
-        @keyframes inner-conic-spin {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(360deg); }
-        }
-        @keyframes mesh-drift-a {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33%  { transform: translate(40px, -30px) scale(1.1); }
-          66%  { transform: translate(-20px, 20px) scale(0.95); }
-        }
-        @keyframes mesh-drift-b {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          40%  { transform: translate(-50px, 30px) scale(1.08); }
-          70%  { transform: translate(30px, -20px) scale(1.02); }
-        }
-        @keyframes mesh-drift-c {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50%  { transform: translate(20px, -40px) scale(1.05); }
-        }
-        @keyframes streak-drift {
-          0%, 100% { transform: translateX(-5%); opacity: 0.5; }
-          50%       { transform: translateX(5%); opacity: 1; }
-        }
-        @keyframes dot-float {
-          0%, 100% { transform: translateY(0px); opacity: 0.6; }
-          50%       { transform: translateY(-5px); opacity: 1; }
-        }
-      `}</style>
     </section>
   );
 }

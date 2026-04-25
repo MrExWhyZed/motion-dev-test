@@ -59,7 +59,7 @@
   }
 
   html {
-    scroll-behavior: smooth;
+    scroll-behavior: auto;
   }
 
   h1, h2, h3, h4, h5, h6, p {
@@ -322,9 +322,26 @@
   --duration-long: 1.2s;
 }
 
-/* Smooth scrolling globally */
+/* Lenis smooth scroll compatibility */
 html {
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
+}
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-stopped {
+  overflow: clip;
+}
+
+.lenis.lenis-smooth iframe {
+  pointer-events: auto;
 }
 
 /* Section entrance — common class usable across all sections */

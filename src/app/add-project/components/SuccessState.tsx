@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
+import Link from 'next/link';
 
 interface SuccessStateProps {
   onStartNew: () => void;
@@ -221,7 +222,7 @@ export default function SuccessState({ onStartNew }: SuccessStateProps) {
           New project
         </button>
 
-        <a
+        <Link
           href="/"
           className="w-full sm:flex-1 flex items-center justify-center gap-2 py-3.5 rounded-full text-sm font-light tracking-wide transition-all duration-200"
           style={{
@@ -244,7 +245,7 @@ export default function SuccessState({ onStartNew }: SuccessStateProps) {
           }}
         >
           Back to studio
-        </a>
+        </Link>
       </div>
     </div>
   );

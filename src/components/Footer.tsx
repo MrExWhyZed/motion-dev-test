@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import AppLogo from '@/components/ui/AppLogo';
+import Image from 'next/image';
 
 export default function Footer() {
   return (
@@ -12,12 +12,20 @@ export default function Footer() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-10">
           {/* Left: Logo + Tagline */}
           <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2.5">
-              <AppLogo size={26} />
-              <span className="font-bold text-sm tracking-tight text-foreground">
-                Motion<span className="text-gradient-gold">Grace</span>
+            <Link href="/" className="flex items-center gap-2.5 group">
+              <div className="relative w-8 h-8 flex-shrink-0">
+                <Image
+                  src="/motion_grace_logo.png"
+                  alt="Motion Grace"
+                  fill
+                  className="object-contain brightness-0 invert"
+                />
+              </div>
+              <span className="font-bold text-sm tracking-tight">
+                <span className="text-foreground">Motion</span>
+                <span className="text-gradient-gold">Grace</span>
               </span>
-            </div>
+            </Link>
             <p className="text-xs text-muted-foreground font-light max-w-[200px] leading-relaxed tracking-wide">
               Cinematic CGI for modern beauty brands.
             </p>

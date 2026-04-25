@@ -1,358 +1,146 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-
-type Plan = {
-  id: string;
-  name: string;
-  price: string;
-  accent: string;
-  badge: string | null;
-  line: string;
-  metrics: { value: string; label: string }[];
-  features: string[];
-};
+import Link from 'next/link';
+import { pricingPlans, type PricingPlan } from '@/app/pricing/pricingData';
 
 type UpgradeStat = {
-  label: string;
-  before: string;
-  after: string;
-  accent: string;
-  kicker: string;
+  label: string; before: string; after: string; accent: string; kicker: string; icon: string;
 };
 
-const plans: Plan[] = [
-  {
-    id: 'essentials',
-    name: 'The Essentials',
-    price: '₹34,999',
-    accent: '#C9A96E',
-    badge: null,
-    line: 'Fast premium launch assets.',
-    metrics: [
-      { value: '20', label: 'PNGs' },
-      { value: '1', label: 'Loop' },
-    ],
-    features: ['Digital twin included', 'Studio or virtual set', 'Commerce-ready output'],
-  },
-  {
-    id: 'viral',
-    name: 'The Viral Impact',
-    price: '₹74,999',
-    accent: '#4A9EFF',
-    badge: 'Signature',
-    line: 'Hero motion plus launch depth.',
-    metrics: [
-      { value: '40', label: 'Stills' },
-      { value: '1', label: 'AR Asset' },
-    ],
-    features: ['High-energy campaign film', 'Action still pack', 'Digital twin included'],
-  },
-];
-
 const upgradeStats: UpgradeStat[] = [
-  { label: 'Timeline', before: '6 weeks', after: '5 days', accent: '#C9A96E', kicker: '12x faster' },
-  { label: 'Spend', before: '$80k', after: '$8k', accent: '#4A9EFF', kicker: '90% leaner' },
-  { label: 'Volume', before: '20', after: '100+', accent: '#8B5CF6', kicker: '5x output' },
-  { label: 'Changes', before: 'Reshoots', after: 'Instant', accent: '#34D399', kicker: 'No drag' },
+  { label: 'Timeline', before: '6 weeks', after: '5 days',  accent: '#C9A96E', kicker: '12× faster', icon: '◷' },
+  { label: 'Cost',     before: '$80k',    after: '$8k',     accent: '#4A9EFF', kicker: '90% leaner', icon: '◈' },
+  { label: 'Assets',   before: '20',      after: '100+',    accent: '#A78BFA', kicker: '5× output',  icon: '◫' },
+  { label: 'Revisions',before: 'Reshoots',after: 'Instant', accent: '#34D399', kicker: 'Zero drag',  icon: '◎' },
 ];
-
-const sceneParticles = Array.from({ length: 16 }, (_, index) => ({
-  id: index,
-  left: `${(index * 6.7 + 8) % 100}%`,
-  top: `${(index * 11.4 + 6) % 100}%`,
-  size: index % 4 === 0 ? 3 : index % 3 === 0 ? 2 : 1.4,
-  duration: 8 + (index % 5) * 1.4,
-  delay: index * 0.42,
-  color:
-    index % 3 === 0
-      ? 'rgba(201,169,110,0.5)'
-      : index % 3 === 1
-        ? 'rgba(74,158,255,0.42)'
-        : 'rgba(237,233,227,0.18)',
-}));
 
 function useCompactLayout(breakpoint = 920) {
   const [compact, setCompact] = useState(false);
-
   useEffect(() => {
     const update = () => setCompact(window.innerWidth < breakpoint);
     update();
     window.addEventListener('resize', update, { passive: true });
     return () => window.removeEventListener('resize', update);
   }, [breakpoint]);
-
   return compact;
 }
 
-function useCardTilt(intensity = 8) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [state, setState] = useState({
-    rotateX: 0,
-    rotateY: 0,
-    glowX: 50,
-    glowY: 50,
-    active: false,
-  });
+function useCardTilt(intensity = 3.25) {
+  const ref      = useRef<HTMLDivElement | null>(null);
+  const frameRef = useRef<number>(0);
+  const runningRef = useRef(false);
+  const targetRef  = useRef({ rx: 0, ry: 0, gx: 50, gy: 50 });
+  const currentRef = useRef({ rx: 0, ry: 0, gx: 50, gy: 50 });
+  const [live, setLive] = useState({ rx: 0, ry: 0, gx: 50, gy: 50, active: false });
 
-  const onMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+  const animate = () => {
+    const t = targetRef.current, c = currentRef.current;
+    c.rx = lerp(c.rx, t.rx, 0.1); c.ry = lerp(c.ry, t.ry, 0.1);
+    c.gx = lerp(c.gx, t.gx, 0.1); c.gy = lerp(c.gy, t.gy, 0.1);
+    const active = Math.abs(c.rx) > 0.02 || Math.abs(c.ry) > 0.02 || Math.abs(t.rx) > 0.02 || Math.abs(t.ry) > 0.02;
+    setLive({ rx: c.rx, ry: c.ry, gx: c.gx, gy: c.gy, active });
+    if (active) { frameRef.current = requestAnimationFrame(animate); return; }
+    runningRef.current = false; frameRef.current = 0;
+  };
+
+  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!ref.current) return;
-
     const rect = ref.current.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / rect.width;
-    const y = (event.clientY - rect.top) / rect.height;
-
-    setState({
-      rotateX: (0.5 - y) * intensity,
-      rotateY: (x - 0.5) * intensity,
-      glowX: x * 100,
-      glowY: y * 100,
-      active: true,
-    });
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top)  / rect.height;
+    targetRef.current = { rx: (0.5 - y) * intensity, ry: (x - 0.5) * intensity, gx: x * 100, gy: y * 100 };
   };
-
-  const onMouseLeave = () => {
-    setState({
-      rotateX: 0,
-      rotateY: 0,
-      glowX: 50,
-      glowY: 50,
-      active: false,
-    });
+  const onMouseEnter = () => {
+    if (runningRef.current) return;
+    runningRef.current = true;
+    frameRef.current = requestAnimationFrame(animate);
   };
+  const onMouseLeave = () => { targetRef.current = { rx: 0, ry: 0, gx: 50, gy: 50 }; };
 
-  return { ref, state, onMouseMove, onMouseLeave };
+  useEffect(() => () => { if (frameRef.current) cancelAnimationFrame(frameRef.current); runningRef.current = false; }, []);
+  return { ref, live, onMouseMove, onMouseEnter, onMouseLeave };
 }
 
-const PricingCard = React.memo(function PricingCard({ plan }: { plan: Plan }) {
-  const { ref, state, onMouseMove, onMouseLeave } = useCardTilt();
+const PricingCard = React.memo(function PricingCard({ plan }: { plan: PricingPlan }) {
+  const { ref, live, onMouseMove, onMouseEnter, onMouseLeave } = useCardTilt();
+  const isSignature = !!plan.badge;
 
   return (
-    <div data-gsap-card="pricing" style={{ height: '100%' }}>
-      <div style={{ perspective: '1600px', height: '100%' }}>
-        <div
-          ref={ref}
-          onMouseMove={onMouseMove}
-          onMouseLeave={onMouseLeave}
-          style={{
-            position: 'relative',
-            height: '100%',
-            overflow: 'hidden',
-            borderRadius: '24px',
-            border: '1px solid transparent',
-            background: `
-              linear-gradient(180deg, rgba(10,10,18,0.94), rgba(4,4,10,0.98)) padding-box,
-              linear-gradient(145deg, rgba(255,255,255,0.08), ${plan.accent}${plan.badge ? '55' : '26'}, rgba(255,255,255,0.03)) border-box
-            `,
-            boxShadow: state.active
-              ? `0 30px 62px rgba(0,0,0,0.44), 0 18px 42px ${plan.accent}18`
-              : `0 22px 48px rgba(0,0,0,0.34)`,
-            transform: `perspective(1600px) rotateX(${state.rotateX}deg) rotateY(${state.rotateY}deg) translateY(${state.active ? -5 : 0}px)`,
-            transition: state.active
-              ? 'transform 140ms ease, box-shadow 220ms ease'
-              : 'transform 520ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 320ms ease',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-          }}
-        >
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              pointerEvents: 'none',
-              background: `radial-gradient(circle at ${state.glowX}% ${state.glowY}%, ${plan.accent}18 0%, transparent 35%)`,
-            }}
-          />
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              pointerEvents: 'none',
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                position: 'absolute',
-                top: '-18%',
-                left: '-12%',
-                width: '42%',
-                height: '138%',
-                background: `linear-gradient(90deg, transparent 0%, ${plan.accent}${plan.badge ? '18' : '12'} 48%, transparent 100%)`,
-                filter: 'blur(10px)',
-                animation: `light-sweep ${plan.badge ? '5.6s' : '7.2s'} ease-in-out infinite`,
-              }}
-            />
+    <div data-gsap-card="pricing" style={{ height: '100%', perspective: '1400px' }}>
+      <div
+        ref={ref}
+        onMouseMove={onMouseMove} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}
+        style={{
+          position: 'relative', height: '100%', borderRadius: '26px', overflow: 'hidden',
+          border: '1px solid transparent',
+          background: `
+            linear-gradient(170deg, rgba(12,12,22,0.97) 0%, rgba(6,6,14,0.99) 100%) padding-box,
+            linear-gradient(135deg, rgba(255,255,255,0.1) 0%, ${plan.accent}${isSignature ? '55' : '30'} 50%, rgba(255,255,255,0.04) 100%) border-box
+          `,
+          boxShadow: live.active
+            ? `0 34px 68px rgba(0,0,0,0.52), 0 0 42px ${plan.accent}14, inset 0 1px 0 rgba(255,255,255,0.06)`
+            : `0 20px 50px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.04)`,
+          transform: `rotateX(${live.rx}deg) rotateY(${live.ry}deg) translateY(${live.active ? -3 : 0}px)`,
+          transition: live.active
+            ? 'box-shadow 180ms ease'
+            : 'transform 600ms cubic-bezier(0.16,1,0.3,1), box-shadow 400ms ease',
+        }}
+      >
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: `radial-gradient(circle at ${live.gx}% ${live.gy}%, ${plan.accent}20 0%, transparent 42%)`,
+          transition: live.active ? 'none' : 'opacity 600ms ease',
+          opacity: live.active ? 1 : 0,
+        }} />
+        <div style={{ position: 'absolute', top: 0, left: '10%', right: '10%', height: '1px', background: `linear-gradient(90deg, transparent, ${plan.accent}90, transparent)` }} />
+        <div style={{ position: 'absolute', bottom: '-20%', left: '-10%', width: '60%', height: '60%', background: `radial-gradient(circle, ${plan.accent}10 0%, transparent 70%)`, pointerEvents: 'none', filter: 'blur(30px)' }} />
+
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%', padding: '28px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+            <div>
+              <div style={{ fontSize: '9px', letterSpacing: '0.26em', textTransform: 'uppercase', color: `${plan.accent}cc`, fontWeight: 800, marginBottom: '12px' }}>{plan.name}</div>
+              <div style={{ fontSize: 'clamp(2rem, 3vw, 2.8rem)', fontWeight: 900, letterSpacing: '-0.05em', color: '#F7F1E2', lineHeight: 0.95 }}>{plan.price}</div>
+              <div style={{ fontSize: '11px', color: 'rgba(237,233,227,0.45)', marginTop: '7px' }}>{plan.line}</div>
+            </div>
+            {plan.badge && (
+              <div style={{ padding: '5px 10px', borderRadius: '999px', background: `${plan.accent}18`, border: `1px solid ${plan.accent}35`, color: plan.accent, fontSize: '8px', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 800, boxShadow: `0 0 20px ${plan.accent}20` }}>
+                {plan.badge}
+              </div>
+            )}
           </div>
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '1px',
-              background: `linear-gradient(90deg, transparent, ${plan.accent}88 50%, transparent)`,
-            }}
-          />
 
-          <div
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-              height: '100%',
-              padding: '20px',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '14px', alignItems: 'flex-start' }}>
-              <div>
-                <div
-                  style={{
-                    fontSize: '9px',
-                    letterSpacing: '0.2em',
-                    textTransform: 'uppercase',
-                    color: `${plan.accent}aa`,
-                    fontWeight: 800,
-                    marginBottom: '9px',
-                  }}
-                >
-                  {plan.name}
-                </div>
-                <div
-                  style={{
-                    fontSize: 'clamp(1.65rem, 2.6vw, 2.55rem)',
-                    fontWeight: 900,
-                    lineHeight: 0.94,
-                    letterSpacing: '-0.05em',
-                    color: '#F7F1E2',
-                    marginBottom: '6px',
-                  }}
-                >
-                  {plan.price}
-                </div>
-                <div style={{ fontSize: '10px', color: 'rgba(237,233,227,0.54)', lineHeight: 1.55 }}>
-                  {plan.line}
-                </div>
+          <div style={{ height: '1px', background: `linear-gradient(90deg, ${plan.accent}30, transparent 70%)`, marginBottom: '18px' }} />
+
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${plan.metrics.length}, 1fr)`, gap: '8px', marginBottom: '20px' }}>
+            {plan.metrics.map((m) => (
+              <div key={m.label} style={{ borderRadius: '14px', padding: '12px 10px', textAlign: 'center', background: 'rgba(255,255,255,0.025)', border: `1px solid ${plan.accent}14` }}>
+                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#F7F1E2', letterSpacing: '-0.03em' }}>{m.value}</div>
+                <div style={{ fontSize: '8px', letterSpacing: '0.18em', textTransform: 'uppercase', color: `${plan.accent}88`, marginTop: '3px' }}>{m.label}</div>
               </div>
+            ))}
+          </div>
 
-              {plan.badge ? (
-                <span
-                  style={{
-                    padding: '6px 10px',
-                    borderRadius: '999px',
-                    background: `${plan.accent}16`,
-                    border: `1px solid ${plan.accent}2e`,
-                    color: plan.accent,
-                    fontSize: '8px',
-                    letterSpacing: '0.18em',
-                    textTransform: 'uppercase',
-                    fontWeight: 800,
-                    boxShadow: `0 0 22px ${plan.accent}14`,
-                  }}
-                >
-                  {plan.badge}
-                </span>
-              ) : null}
-            </div>
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                gap: '10px',
-              }}
-            >
-              {plan.metrics.map((metric) => (
-                <div
-                  key={metric.label}
-                  style={{
-                    borderRadius: '16px',
-                    padding: '12px',
-                    background: 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${plan.accent}16`,
-                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
-                  }}
-                >
-                  <div style={{ fontSize: '1rem', fontWeight: 800, color: '#F7F1E2', marginBottom: '2px' }}>
-                    {metric.value}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '8px',
-                      letterSpacing: '0.16em',
-                      textTransform: 'uppercase',
-                      color: `${plan.accent}88`,
-                    }}
-                  >
-                    {metric.label}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px',
-                paddingTop: '4px',
-              }}
-            >
-              {plan.features.map((feature) => (
-                <div key={feature} style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <span
-                    style={{
-                      width: '7px',
-                      height: '7px',
-                      borderRadius: '999px',
-                      background: plan.accent,
-                      boxShadow: `0 0 14px ${plan.accent}55`,
-                      flexShrink: 0,
-                    }}
-                  />
-                  <span style={{ fontSize: '10px', color: 'rgba(237,233,227,0.72)', lineHeight: 1.45 }}>
-                    {feature}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div
-              style={{
-                marginTop: 'auto',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '12px',
-                paddingTop: '10px',
-                borderTop: '1px solid rgba(255,255,255,0.06)',
-              }}
-            >
-              <div style={{ fontSize: '8px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(237,233,227,0.3)' }}>
-                Twin setup included
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '9px', flex: 1 }}>
+            {plan.features.map((f) => (
+              <div key={f} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <div style={{ width: '5px', height: '5px', borderRadius: '999px', flexShrink: 0, marginTop: '5px', background: plan.accent, boxShadow: `0 0 8px ${plan.accent}70` }} />
+                <span style={{ fontSize: '11.5px', color: 'rgba(237,233,227,0.68)', lineHeight: 1.55 }}>{f}</span>
               </div>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 12px',
-                  borderRadius: '999px',
-                  border: `1px solid ${plan.accent}24`,
-                  background: `${plan.accent}10`,
-                  color: plan.accent,
-                  fontSize: '8px',
-                  letterSpacing: '0.16em',
-                  textTransform: 'uppercase',
-                  fontWeight: 800,
-                  boxShadow: `0 0 18px ${plan.accent}12`,
-                }}
-              >
+            ))}
+          </div>
+
+          <div style={{ marginTop: '22px', paddingTop: '18px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontSize: '9px', color: 'rgba(237,233,227,0.28)', letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: '12px' }}>{plan.turnaround}</div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Link href="/add-project" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '10px 16px', borderRadius: '999px', background: plan.accent, color: '#04040a', fontSize: '9px', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 900, textDecoration: 'none', flex: 1, boxShadow: `0 8px 28px ${plan.accent}40` }}>
                 Get started
-                <span style={{ fontSize: '10px', lineHeight: 1 }}>→</span>
-              </div>
+              </Link>
+              <Link href="/pricing" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '10px 16px', borderRadius: '999px', border: `1px solid ${plan.accent}28`, background: 'rgba(255,255,255,0.03)', color: 'rgba(237,233,227,0.6)', fontSize: '9px', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, textDecoration: 'none' }}>
+                Details
+              </Link>
             </div>
           </div>
         </div>
@@ -363,147 +151,59 @@ const PricingCard = React.memo(function PricingCard({ plan }: { plan: Plan }) {
 
 const UpgradeCard = React.memo(function UpgradeCard({ stat }: { stat: UpgradeStat }) {
   return (
-    <div data-gsap-card="upgrade">
-      <div
-        style={{
-          position: 'relative',
-          overflow: 'hidden',
-          borderRadius: '20px',
-          border: '1px solid transparent',
-          background: `
-            linear-gradient(180deg, rgba(9,9,15,0.95), rgba(5,5,10,0.98)) padding-box,
-            linear-gradient(145deg, rgba(255,255,255,0.08), ${stat.accent}26, rgba(255,255,255,0.03)) border-box
-          `,
-          padding: '16px',
-          boxShadow: '0 18px 36px rgba(0,0,0,0.26)',
-        }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            pointerEvents: 'none',
-            background: `radial-gradient(circle at 18% 12%, ${stat.accent}16 0%, transparent 48%)`,
-          }}
-        />
-        <div
-          style={{
-            position: 'relative',
-            zIndex: 1,
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '10px',
-              marginBottom: '12px',
-            }}
-          >
-            <div
-              style={{
-                fontSize: '8px',
-                letterSpacing: '0.2em',
-                textTransform: 'uppercase',
-                color: `${stat.accent}aa`,
-                fontWeight: 800,
-              }}
-            >
-              {stat.label}
-            </div>
-            <div
-              style={{
-                padding: '5px 7px',
-                borderRadius: '999px',
-                border: `1px solid ${stat.accent}28`,
-                background: `${stat.accent}12`,
-                color: stat.accent,
-                fontSize: '8px',
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                fontWeight: 800,
-              }}
-            >
-              {stat.kicker}
-            </div>
+    <div data-gsap-card="upgrade" style={{
+      position: 'relative', borderRadius: '22px', overflow: 'hidden',
+      border: '1px solid transparent',
+      background: `
+        linear-gradient(160deg, rgba(10,10,20,0.97) 0%, rgba(5,5,12,0.99) 100%) padding-box,
+        linear-gradient(145deg, rgba(255,255,255,0.07) 0%, ${stat.accent}28 100%) border-box
+      `,
+      padding: '22px 20px', willChange: 'opacity, transform, filter', transformStyle: 'preserve-3d',
+    }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '60%', background: `radial-gradient(ellipse at 30% 0%, ${stat.accent}16 0%, transparent 60%)`, pointerEvents: 'none' }} />
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+            <span style={{ fontSize: '13px', color: `${stat.accent}cc` }}>{stat.icon}</span>
+            <span style={{ fontSize: '8px', letterSpacing: '0.22em', textTransform: 'uppercase', color: `${stat.accent}aa`, fontWeight: 800 }}>{stat.label}</span>
           </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 34px 1fr', gap: '10px', alignItems: 'center' }}>
-            <div>
-              <div style={{ fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.22)', marginBottom: '4px' }}>
-                Before
-              </div>
-              <div
-                style={{
-                  fontSize: '0.98rem',
-                  color: 'rgba(255,255,255,0.34)',
-                  textDecoration: 'line-through',
-                  textDecorationColor: 'rgba(255,90,90,0.34)',
-                }}
-              >
-                {stat.before}
-              </div>
-            </div>
-
-            <div
-              style={{
-                width: '34px',
-                height: '34px',
-                borderRadius: '999px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: `${stat.accent}16`,
-                border: `1px solid ${stat.accent}2b`,
-                color: stat.accent,
-                boxShadow: `0 0 18px ${stat.accent}16`,
-                fontSize: '13px',
-                fontWeight: 700,
-              }}
-            >
-              →
-            </div>
-
-            <div>
-              <div style={{ fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', color: `${stat.accent}88`, marginBottom: '4px' }}>
-                After
-              </div>
-              <div style={{ fontSize: '1.12rem', fontWeight: 900, letterSpacing: '-0.04em', color: '#F7F1E2' }}>
-                {stat.after}
-              </div>
-            </div>
+          <div style={{ padding: '4px 8px', borderRadius: '999px', background: `${stat.accent}14`, border: `1px solid ${stat.accent}24`, color: stat.accent, fontSize: '8px', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 800 }}>
+            {stat.kicker}
           </div>
-
-          <div
-            style={{
-              marginTop: '14px',
-              height: '1px',
-              background: `linear-gradient(90deg, ${stat.accent}40, transparent)`,
-            }}
-          />
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '7px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.2)', marginBottom: '5px' }}>Before</div>
+            <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'rgba(255,255,255,0.22)', textDecoration: 'line-through', textDecorationColor: 'rgba(255,80,80,0.3)', letterSpacing: '-0.02em' }}>{stat.before}</div>
+          </div>
+          <div style={{ width: '28px', height: '28px', borderRadius: '999px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${stat.accent}18`, border: `1px solid ${stat.accent}28`, color: stat.accent, fontSize: '11px' }}>→</div>
+          <div style={{ flex: 1, textAlign: 'right' }}>
+            <div style={{ fontSize: '7px', letterSpacing: '0.2em', textTransform: 'uppercase', color: `${stat.accent}88`, marginBottom: '5px' }}>After</div>
+            <div style={{ fontSize: '1.35rem', fontWeight: 900, letterSpacing: '-0.04em', color: '#F7F1E2' }}>{stat.after}</div>
+          </div>
+        </div>
+        <div style={{ marginTop: '16px', height: '2px', borderRadius: '999px', background: `linear-gradient(90deg, ${stat.accent}60, ${stat.accent}18)` }} />
       </div>
     </div>
   );
 });
 
 export default function TransformationSection() {
-  const sectionRef = useRef<HTMLElement | null>(null);
-  const pricingSceneRef = useRef<HTMLDivElement | null>(null);
-  const upgradeSceneRef = useRef<HTMLDivElement | null>(null);
-  const pricingGlowRef = useRef<HTMLDivElement | null>(null);
-  const upgradeGlowRef = useRef<HTMLDivElement | null>(null);
-  const ringsRef = useRef<HTMLDivElement | null>(null);
+  const sectionRef       = useRef<HTMLElement | null>(null);
+  const revealShellRef   = useRef<HTMLDivElement | null>(null);
+  const revealCurtainRef = useRef<HTMLDivElement | null>(null);
+  const pricingSceneRef  = useRef<HTMLDivElement | null>(null);
+  const upgradeSceneRef  = useRef<HTMLDivElement | null>(null);
+  const pricingGlowRef   = useRef<HTMLDivElement | null>(null);
+  const upgradeGlowRef   = useRef<HTMLDivElement | null>(null);
   const pricingHeaderRef = useRef<HTMLDivElement | null>(null);
   const upgradeHeaderRef = useRef<HTMLDivElement | null>(null);
-  const chipRowRef = useRef<HTMLDivElement | null>(null);
-  const progressFillRef = useRef<HTMLDivElement | null>(null);
-  const progressDotRef = useRef<HTMLDivElement | null>(null);
+  const chipRowRef       = useRef<HTMLDivElement | null>(null);
+  const progressFillRef  = useRef<HTMLDivElement | null>(null);
   const compact = useCompactLayout();
 
   useEffect(() => {
-    if (!sectionRef.current || !pricingSceneRef.current || !upgradeSceneRef.current) return;
+    if (!sectionRef.current) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     let mounted = true;
@@ -516,165 +216,159 @@ export default function TransformationSection() {
       ]);
 
       if (!mounted || !sectionRef.current || !pricingSceneRef.current || !upgradeSceneRef.current) return;
-
       gsap.registerPlugin(ScrollTrigger);
 
-      const pricingScene = pricingSceneRef.current;
-      const upgradeScene = upgradeSceneRef.current;
+      const pricingScene = pricingSceneRef.current!;
+      const upgradeScene = upgradeSceneRef.current!;
       const pricingCards = Array.from(pricingScene.querySelectorAll<HTMLElement>('[data-gsap-card="pricing"]'));
       const upgradeCards = Array.from(upgradeScene.querySelectorAll<HTMLElement>('[data-gsap-card="upgrade"]'));
-      const pricingCopy = pricingHeaderRef.current ? Array.from(pricingHeaderRef.current.children) as HTMLElement[] : [];
-      const upgradeCopy = upgradeHeaderRef.current ? Array.from(upgradeHeaderRef.current.children) as HTMLElement[] : [];
-      const chips = chipRowRef.current ? Array.from(chipRowRef.current.children) as HTMLElement[] : [];
-      const progressFill = progressFillRef.current;
-      const progressDot = progressDotRef.current;
+      const pricingCopy  = pricingHeaderRef.current ? Array.from(pricingHeaderRef.current.children) as HTMLElement[] : [];
+      const upgradeCopy  = upgradeHeaderRef.current ? Array.from(upgradeHeaderRef.current.children) as HTMLElement[] : [];
+      const chips        = chipRowRef.current ? Array.from(chipRowRef.current.children) as HTMLElement[] : [];
 
       const ctx = gsap.context(() => {
-        gsap.set(pricingScene, { autoAlpha: 1, y: 0, scale: 1 });
-        gsap.set(upgradeScene, { autoAlpha: 0, y: 92, scale: 0.955 });
-        gsap.set(pricingCopy, { autoAlpha: 0, y: 24, filter: 'blur(10px)' });
-        gsap.set(upgradeCopy, { autoAlpha: 0, y: 26, filter: 'blur(10px)' });
-        gsap.set(pricingCards, { y: 64, autoAlpha: 0, rotateX: -10, transformOrigin: '50% 100%' });
-        gsap.set(upgradeCards, { y: 56, autoAlpha: 0, scale: 0.94, rotateX: -8, transformOrigin: '50% 100%' });
-        gsap.set(chips, { autoAlpha: 0, y: 20, filter: 'blur(10px)' });
-        if (pricingGlowRef.current) gsap.set(pricingGlowRef.current, { opacity: 0.74, scale: 1 });
-        if (upgradeGlowRef.current) gsap.set(upgradeGlowRef.current, { opacity: 0.1, scale: 0.92 });
-        if (progressFill) gsap.set(progressFill, { scaleY: 0.12, transformOrigin: '50% 100%' });
-        if (progressDot) gsap.set(progressDot, { yPercent: 0 });
 
-        if (ringsRef.current) {
-          gsap.to(ringsRef.current, {
-            rotation: 360,
-            duration: 44,
-            repeat: -1,
-            ease: 'none',
-            transformOrigin: '50% 50%',
+        // ── INITIAL STATES ────────────────────────────────────────────────
+        if (revealShellRef.current) {
+          gsap.set(revealShellRef.current, {
+            autoAlpha: 0,
+            y: compact ? 48 : 64,
+            scale: compact ? 0.99 : 0.975,
+            clipPath: compact
+              ? 'inset(20% 8% 18% 8% round 16px)'
+              : 'inset(26% 10% 22% 10% round 24px)',
+            transformOrigin: '50% 60%',
           });
         }
+        if (revealCurtainRef.current) gsap.set(revealCurtainRef.current, { autoAlpha: 1 });
 
+        gsap.set(pricingScene, { autoAlpha: 1, y: 0, scale: 1, filter: 'blur(0px)', transformOrigin: '50% 48%' });
+        gsap.set(upgradeScene, { autoAlpha: 0, y: 28, scale: 0.995, transformOrigin: '50% 52%' });
+        gsap.set(pricingCopy,  { autoAlpha: 1, y: 0, filter: 'blur(0px)' });
+        gsap.set(upgradeCopy,  { autoAlpha: 0, y: 16 });
+        gsap.set(pricingCards, { autoAlpha: 1, y: 0, scale: 1, filter: 'blur(0px)', transformOrigin: '50% 100%', transformPerspective: 1000 });
+        gsap.set(upgradeCards, { autoAlpha: 0, y: 24, scale: 0.988, transformOrigin: '50% 100%', transformPerspective: 1000 });
+        gsap.set(chips, { autoAlpha: 0, y: 10, scale: 0.97 });
+        if (pricingGlowRef.current) gsap.set(pricingGlowRef.current, { opacity: 0.65 });
+        if (upgradeGlowRef.current) gsap.set(upgradeGlowRef.current, { opacity: 0 });
+        if (progressFillRef.current) gsap.set(progressFillRef.current, { scaleX: 0, transformOrigin: 'left center' });
+
+        // ── SCROLL-REVEAL: section rises into view from below Process ─────
+        // Higher scrub = more responsive, less laggy; feels tighter at section boundary
+        gsap.timeline({
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: 'top 95%',   // start revealing as soon as Process exits
+            end:   'top 15%',
+            scrub: 0.5,         // tighter than before — eliminates the "stuck" feeling
+            invalidateOnRefresh: true,
+          },
+        })
+          .to(revealShellRef.current, {
+            autoAlpha: 1, y: 0, scale: 1,
+            clipPath: 'inset(0% 0% 0% 0% round 0px)',
+            ease: 'power2.out', duration: 1,
+          }, 0)
+          .to(revealCurtainRef.current, {
+            autoAlpha: 0, ease: 'power2.inOut', duration: 0.6,
+          }, 0.15);
+
+        // ── PINNED SCENE-SWAP ─────────────────────────────────────────────
+        // scrub: 1 instead of 0.6 — eliminates the rubbery inconsistency;
+        // 1 = exactly 1 second of visual lag behind scroll, which feels
+        // deliberate and weighty rather than glitchy/stuck.
         const tl = gsap.timeline({
-          defaults: { ease: 'power3.out' },
+          defaults: { ease: 'power2.inOut' },
           scrollTrigger: {
             trigger: sectionRef.current,
             start: 'top top',
-            end: compact ? '+=190%' : '+=175%',
-            scrub: 1.45,
+            end: compact ? '+=280%' : '+=260%',
+            scrub: 1,
             pin: true,
-            anticipatePin: 1.2,
+            anticipatePin: 1,
+            invalidateOnRefresh: true,
           },
         });
 
-        tl.to(pricingCopy, {
-          autoAlpha: 1,
-          y: 0,
-          filter: 'blur(0px)',
-          duration: 0.42,
-          stagger: 0.08,
-        }, 0.02)
+        // PHASE 1: Breathe on pricing (0 → 0.55)
+        tl.addLabel('hold', 0)
+          .to(progressFillRef.current, { scaleX: 0.38, duration: 0.55, ease: 'power1.inOut' }, 'hold')
+          .to(pricingGlowRef.current,  { opacity: 0.38, duration: 0.45, ease: 'power1.in' },  'hold+=0.08')
+          .to(pricingScene,            { scale: 0.998,  duration: 0.55, ease: 'power1.inOut' },'hold')
+
+        // PHASE 2: Exit pricing (0.55 → 0.78) — cards fall away like a curtain
+          .addLabel('exitPricing', 0.55)
           .to(pricingCards, {
-          y: 0,
-          autoAlpha: 1,
-          rotateX: 0,
-          duration: 0.56,
-          stagger: 0.12,
-        }, 0.08)
-          .to(pricingScene, {
-            y: -30,
-            scale: 0.968,
-            autoAlpha: 0.16,
-            filter: 'blur(3px)',
-            duration: 0.38,
-            ease: 'power2.inOut',
-          }, 0.62)
+            autoAlpha: 0, y: -24, scale: 0.992,
+            duration: 0.24, stagger: { each: 0.035, from: 'start' }, ease: 'power2.in',
+          }, 'exitPricing')
           .to(pricingCopy, {
-            y: -30,
-            autoAlpha: 0,
-            filter: 'blur(12px)',
-            duration: 0.3,
-            stagger: 0.05,
-            ease: 'power2.in',
-          }, 0.64)
-          .to(pricingCards, {
-            y: -34,
-            autoAlpha: 0,
-            rotateX: 10,
-            stagger: 0.06,
-            duration: 0.3,
-            ease: 'power2.in',
-          }, 0.68)
+            autoAlpha: 0, y: -12, filter: 'blur(4px)',
+            duration: 0.2, stagger: 0.025, ease: 'power2.in',
+          }, 'exitPricing+=0.04')
+          .to(pricingScene, {
+            autoAlpha: 0, y: -10, scale: 0.993,
+            duration: 0.18, ease: 'power2.in',
+          }, 'exitPricing+=0.16')
+          .to(pricingGlowRef.current, { opacity: 0, duration: 0.2, ease: 'power2.in' }, 'exitPricing+=0.06')
+
+        // PHASE 3: Enter upgrade (0.72 → 1.55) — rises like the next chapter
+          .addLabel('enterUpgrade', 0.72)
+          .to(upgradeGlowRef.current, { opacity: 0.6, duration: 0.4,  ease: 'power2.out' }, 'enterUpgrade')
           .to(upgradeScene, {
-            autoAlpha: 1,
-            y: 0,
-            scale: 1,
-            duration: 0.38,
-          }, 0.74)
+            autoAlpha: 1, y: 0, scale: 1,
+            duration: 0.42, ease: 'power2.out',
+          }, 'enterUpgrade+=0.05')
           .to(upgradeCopy, {
-            autoAlpha: 1,
-            y: 0,
-            filter: 'blur(0px)',
-            duration: 0.4,
-            stagger: 0.07,
-          }, 0.8)
+            autoAlpha: 1, y: 0,
+            duration: 0.34, stagger: 0.055, ease: 'power2.out',
+          }, 'enterUpgrade+=0.14')
           .to(upgradeCards, {
-            autoAlpha: 1,
-            y: 0,
-            scale: 1,
-            rotateX: 0,
-            stagger: 0.08,
-            duration: 0.46,
-          }, 0.84)
+            autoAlpha: 1, y: 0, scale: 1,
+            duration: 0.42, stagger: { each: 0.06, from: 'start' }, ease: 'power2.out',
+          }, 'enterUpgrade+=0.20')
           .to(chips, {
-            autoAlpha: 1,
-            y: 0,
-            filter: 'blur(0px)',
-            duration: 0.28,
-            stagger: 0.06,
-          }, 0.84);
+            autoAlpha: 1, y: 0, scale: 1,
+            duration: 0.3, stagger: 0.05, ease: 'power2.out',
+          }, 'enterUpgrade+=0.36')
+          .to(progressFillRef.current, { scaleX: 1, duration: 0.5, ease: 'power1.out' }, 'enterUpgrade+=0.08')
 
-        if (progressFill) {
-          tl.to(progressFill, {
-            scaleY: 0.46,
-            duration: 0.5,
-            ease: 'power2.out',
-          }, 0.14)
-            .to(progressFill, {
-              scaleY: 1,
-              duration: 0.46,
-              ease: 'power2.out',
-            }, 0.84);
-        }
+        // PHASE 4: Hold on upgrade (1.55 → 2.1)
+          .addLabel('holdUpgrade', 1.55)
+          .to({}, { duration: 0.55 }, 'holdUpgrade')
 
-        if (progressDot) {
-          tl.to(progressDot, {
-            yPercent: compact ? 56 : 68,
-            duration: 0.44,
-            ease: 'power2.out',
-          }, 0.84);
-        }
+        // PHASE 5: Story bridge EXIT → Testimonials (2.1 → 2.8)
+        // Cards drift upward sequentially like scrolling past a page
+          .addLabel('exitAll', 2.1)
+          .to(upgradeCards, {
+            autoAlpha: 0, y: 20, scale: 0.994,
+            duration: 0.32, stagger: { each: 0.04, from: 'end' }, ease: 'power2.in',
+          }, 'exitAll')
+          .to(chips, {
+            autoAlpha: 0, y: 10, scale: 0.97,
+            duration: 0.22, stagger: 0.04, ease: 'power2.in',
+          }, 'exitAll')
+          .to(upgradeCopy, {
+            autoAlpha: 0, y: 12, filter: 'blur(3px)',
+            duration: 0.28, stagger: 0.04, ease: 'power2.in',
+          }, 'exitAll+=0.06')
+          .to(upgradeGlowRef.current, { opacity: 0, duration: 0.3,  ease: 'power2.in' }, 'exitAll+=0.08')
+          .to(upgradeScene, {
+            autoAlpha: 0, y: 10, scale: 0.995,
+            duration: 0.3, ease: 'power2.in',
+          }, 'exitAll+=0.20')
+          // Shell fades UP and dissolves — sets up Testimonials' entrance perfectly
+          .to(revealShellRef.current, {
+            autoAlpha: 0, y: -20, scale: 0.984,
+            duration: 0.4, ease: 'power2.in',
+          }, 'exitAll+=0.26');
 
-        if (pricingGlowRef.current && upgradeGlowRef.current) {
-          tl.to(pricingGlowRef.current, {
-            opacity: 0.08,
-            scale: 1.18,
-            duration: 0.4,
-            ease: 'power2.inOut',
-          }, 0.62)
-            .to(upgradeGlowRef.current, {
-              opacity: 0.88,
-              scale: 1.06,
-              duration: 0.48,
-              ease: 'power2.out',
-            }, 0.78);
-        }
       }, sectionRef);
 
       cleanup = () => ctx.revert();
     })();
 
-    return () => {
-      mounted = false;
-      cleanup();
-    };
+    return () => { mounted = false; cleanup(); };
   }, [compact]);
 
   return (
@@ -682,380 +376,129 @@ export default function TransformationSection() {
       ref={sectionRef}
       data-gsap-section="sticky"
       style={{
-        position: 'relative',
-        height: '100vh',
-        overflow: 'hidden',
-        background: 'linear-gradient(180deg, #030308 0%, #05050b 42%, #04040a 100%)',
+        position: 'relative', height: '100vh', overflow: 'hidden',
+        background: 'linear-gradient(180deg, #020208 0%, #04040c 50%, #030309 100%)',
       }}
     >
-      <div
-        className="noise-overlay"
-        style={{
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
-        }}
-      />
+      <div ref={revealShellRef} style={{ position: 'absolute', inset: 0, overflow: 'hidden', willChange: 'transform, clip-path, opacity' }}>
 
-      <div
-        ref={ringsRef}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          opacity: 0.18,
-        }}
-      >
-        <div
-          style={{
-            width: compact ? '74vw' : '56vw',
-            height: compact ? '74vw' : '56vw',
-            maxWidth: '860px',
-            maxHeight: '860px',
-            borderRadius: '999px',
-            border: '1px solid rgba(201,169,110,0.08)',
-            borderStyle: 'dashed',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            width: compact ? '54vw' : '40vw',
-            height: compact ? '54vw' : '40vw',
-            maxWidth: '620px',
-            maxHeight: '620px',
-            borderRadius: '999px',
-            border: '1px solid rgba(74,158,255,0.08)',
-          }}
-        />
-      </div>
+        {/* Noise overlay */}
+        <div className="noise-overlay" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }} />
 
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
-          overflow: 'hidden',
-        }}
-      >
-        {sceneParticles.map((particle) => (
-          <div
-            key={particle.id}
-            style={{
-              position: 'absolute',
-              left: particle.left,
-              top: particle.top,
-              width: `${particle.size}px`,
-              height: `${particle.size}px`,
-              borderRadius: '999px',
-              background: particle.color,
-              boxShadow: particle.color.includes('201,169,110')
-                ? '0 0 8px rgba(201,169,110,0.48)'
-                : particle.color.includes('74,158,255')
-                  ? '0 0 7px rgba(74,158,255,0.4)'
-                  : 'none',
-              animation: `float-gentle ${particle.duration}s ease-in-out infinite`,
-              animationDelay: `${particle.delay}s`,
-              opacity: 0.85,
-            }}
-          />
-        ))}
-      </div>
+        {/* Fine grid */}
+        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.028, pointerEvents: 'none' }}>
+          <defs>
+            <pattern id="tgrid" width="48" height="48" patternUnits="userSpaceOnUse">
+              <path d="M 48 0 L 0 0 0 48" fill="none" stroke="white" strokeWidth="0.6" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#tgrid)" />
+        </svg>
 
-      <div
-        ref={pricingGlowRef}
-        style={{
-          position: 'absolute',
-          inset: '-12%',
-          pointerEvents: 'none',
-          background: 'radial-gradient(ellipse 70% 52% at 50% 34%, rgba(201,169,110,0.1) 0%, transparent 58%)',
-          filter: 'blur(24px)',
-        }}
-      />
-      <div
-        ref={upgradeGlowRef}
-        style={{
-          position: 'absolute',
-          inset: '-12%',
-          pointerEvents: 'none',
-          background: 'radial-gradient(ellipse 70% 56% at 50% 52%, rgba(74,158,255,0.1) 0%, transparent 58%)',
-          filter: 'blur(24px)',
-        }}
-      />
+        {/* Scene glows */}
+        <div ref={pricingGlowRef} style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
+          background: 'radial-gradient(ellipse 80% 60% at 50% 30%, rgba(201,169,110,0.1) 0%, transparent 60%)',
+          filter: 'blur(20px)', willChange: 'opacity',
+        }} />
+        <div ref={upgradeGlowRef} style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
+          background: 'radial-gradient(ellipse 80% 60% at 50% 50%, rgba(74,158,255,0.12) 0%, transparent 60%)',
+          filter: 'blur(20px)', willChange: 'opacity',
+        }} />
 
-      <svg
-        style={{
-          position: 'absolute',
-          inset: 0,
-          width: '100%',
-          height: '100%',
-          opacity: 0.035,
-          pointerEvents: 'none',
-        }}
-      >
-        {[14, 26, 38, 50, 62, 74, 86].map((y) => (
-          <line key={y} x1="0" y1={`${y}%`} x2="100%" y2={`${y}%`} stroke="white" strokeWidth="1" />
-        ))}
-      </svg>
+        {/* Progress bar */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'rgba(255,255,255,0.05)', zIndex: 10 }}>
+          <div ref={progressFillRef} style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(90deg, rgba(201,169,110,0.9) 0%, rgba(74,158,255,0.9) 100%)',
+            borderRadius: '999px', boxShadow: '0 0 12px rgba(201,169,110,0.4)', willChange: 'transform',
+          }} />
+        </div>
 
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          maxWidth: '1200px',
-          margin: '0 auto',
-          padding: compact ? '20px 18px' : '26px 32px',
-          left: 0,
-          right: 0,
-        }}
-      >
-        {!compact ? (
-          <div
-            style={{
-              position: 'absolute',
-              top: '50%',
-              right: '10px',
-              transform: 'translateY(-50%)',
-              zIndex: 3,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-            }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', alignItems: 'flex-end' }}>
-              <span style={{ fontSize: '7px', letterSpacing: '0.24em', textTransform: 'uppercase', color: 'rgba(237,233,227,0.28)', fontWeight: 800 }}>
-                Pricing
-              </span>
-              <span style={{ fontSize: '7px', letterSpacing: '0.24em', textTransform: 'uppercase', color: 'rgba(237,233,227,0.28)', fontWeight: 800 }}>
-                Upgrade
-              </span>
-            </div>
-            <div
-              style={{
-                position: 'relative',
-                width: '2px',
-                height: '116px',
-                borderRadius: '999px',
-                background: 'rgba(255,255,255,0.08)',
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                ref={progressFillRef}
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  transformOrigin: '50% 100%',
-                  background: 'linear-gradient(180deg, rgba(201,169,110,0.95), rgba(74,158,255,0.95))',
-                }}
-              />
-              <div
-                ref={progressDotRef}
-                style={{
-                  position: 'absolute',
-                  left: '50%',
-                  top: '-2px',
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '999px',
-                  background: '#F7F1E2',
-                  boxShadow: '0 0 16px rgba(255,255,255,0.45)',
-                  transform: 'translate(-50%, 0)',
-                }}
-              />
-            </div>
+        {/* Side labels */}
+        {!compact && (
+          <div style={{ position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+            {[{ label: 'Packages', color: 'rgba(201,169,110,0.42)' }, { label: 'Upgrade', color: 'rgba(74,158,255,0.32)' }].map(({ label, color }) => (
+              <div key={label} style={{ fontSize: '7px', letterSpacing: '0.28em', textTransform: 'uppercase', fontWeight: 800, color, writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>{label}</div>
+            ))}
           </div>
-        ) : null}
+        )}
 
-        <div
-          ref={pricingSceneRef}
-          style={{
-            position: 'absolute',
-            inset: compact ? '20px 18px' : '26px 32px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            gap: compact ? '18px' : '22px',
-          }}
-        >
+        {/* ── PRICING SCENE ── */}
+        <div ref={pricingSceneRef} style={{
+          position: 'absolute',
+          inset: compact ? '12px 14px' : '14px 20px',
+          paddingRight: compact ? 0 : '44px',
+          display: 'flex', flexDirection: 'column', justifyContent: 'center',
+          gap: compact ? '14px' : '18px', zIndex: 2,
+          willChange: 'transform, opacity, filter',
+        }}>
           <div ref={pricingHeaderRef} style={{ textAlign: 'center' }}>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '10px',
-                marginBottom: '12px',
-              }}
-            >
-              <div style={{ width: '32px', height: '1px', background: 'rgba(201,169,110,0.4)' }} />
-              <span style={{ fontSize: '8px', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'rgba(201,169,110,0.74)', fontWeight: 800 }}>
-                Own the twin
-              </span>
-              <div style={{ width: '32px', height: '1px', background: 'rgba(201,169,110,0.4)' }} />
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <div style={{ width: '28px', height: '1px', background: 'rgba(201,169,110,0.5)' }} />
+              <span style={{ fontSize: '8px', letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(201,169,110,0.75)', fontWeight: 800 }}>Owned Production</span>
+              <div style={{ width: '28px', height: '1px', background: 'rgba(201,169,110,0.5)' }} />
             </div>
-            <h2
-              style={{
-                fontSize: compact ? 'clamp(1.55rem, 7vw, 2.05rem)' : 'clamp(2rem, 4.8vw, 3.4rem)',
-                lineHeight: 1.02,
-                letterSpacing: '-0.05em',
-                fontWeight: 900,
-                color: '#F7F1E2',
-                margin: '0 0 10px',
-              }}
-            >
-              Premium packages,
-              <span
-                style={{
-                  display: 'block',
-                  background: 'linear-gradient(135deg, #F5E5C1 0%, #C9A96E 34%, #68B4FF 100%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                built like the rest of the story.
-              </span>
+            <h2 style={{ fontSize: compact ? 'clamp(1.4rem, 6vw, 1.9rem)' : 'clamp(1.9rem, 4vw, 3.2rem)', fontWeight: 900, letterSpacing: '-0.055em', lineHeight: 1.0, color: '#F7F1E2', margin: '0 0 10px' }}>
+              Pricing{' '}
+              <span style={{ background: 'linear-gradient(120deg, #F5E5C1 0%, #C9A96E 40%, #68B4FF 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>.</span>
             </h2>
-            <p
-              style={{
-                fontSize: compact ? '11px' : '12px',
-                lineHeight: 1.6,
-                color: 'rgba(237,233,227,0.42)',
-                maxWidth: '34ch',
-                margin: '0 auto',
-              }}
-            >
+            <p style={{ fontSize: compact ? '11px' : '12.5px', lineHeight: 1.65, color: 'rgba(237,233,227,0.38)', maxWidth: '36ch', margin: '0 auto' }}>
               Luxury motion, cleaner scale, one owned production system.
             </p>
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: compact ? '1fr' : 'repeat(2, minmax(0, 1fr))',
-              gap: compact ? '12px' : '18px',
-              alignItems: 'stretch',
-              maxWidth: '1080px',
-              width: '100%',
-              margin: '0 auto',
-            }}
-          >
-            {plans.map((plan) => (
-              <PricingCard key={plan.id} plan={plan} />
-            ))}
+          <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: compact ? '12px' : '18px', maxWidth: '1160px', width: '100%', margin: '0 auto', alignItems: 'stretch' }}>
+            {pricingPlans.map((plan) => <PricingCard key={plan.id} plan={plan} />)}
           </div>
         </div>
 
-        <div
-          ref={upgradeSceneRef}
-          style={{
-            position: 'absolute',
-            inset: compact ? '20px 18px' : '26px 32px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            gap: compact ? '18px' : '22px',
-          }}
-        >
+        {/* ── UPGRADE SCENE ── */}
+        <div ref={upgradeSceneRef} style={{
+          position: 'absolute',
+          inset: compact ? '14px 16px' : '18px 24px',
+          paddingRight: compact ? 0 : '44px',
+          display: 'flex', flexDirection: 'column', justifyContent: 'center',
+          gap: compact ? '16px' : '22px', zIndex: 2,
+          willChange: 'transform, opacity, filter',
+        }}>
           <div ref={upgradeHeaderRef} style={{ textAlign: 'center' }}>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '10px',
-                marginBottom: '12px',
-              }}
-            >
-              <div style={{ width: '32px', height: '1px', background: 'rgba(74,158,255,0.42)' }} />
-              <span style={{ fontSize: '8px', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'rgba(74,158,255,0.74)', fontWeight: 800 }}>
-                The upgrade
-              </span>
-              <div style={{ width: '32px', height: '1px', background: 'rgba(74,158,255,0.42)' }} />
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+             
             </div>
-            <h2
-              style={{
-                fontSize: compact ? 'clamp(1.55rem, 7vw, 2.05rem)' : 'clamp(2rem, 4.8vw, 3.4rem)',
-                lineHeight: 1.02,
-                letterSpacing: '-0.05em',
-                fontWeight: 900,
-                color: '#F7F1E2',
-                margin: '0 0 10px',
-              }}
-            >
-              From production drag
-              <span
-                style={{
-                  display: 'block',
-                  background: 'linear-gradient(135deg, #F5E5C1 0%, #C9A96E 24%, #68B4FF 72%, #9A7BFF 100%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                to owned velocity.
-              </span>
+            <h2 style={{ fontSize: compact ? 'clamp(1.4rem, 6vw, 1.9rem)' : 'clamp(1.9rem, 4vw, 3.2rem)', fontWeight: 900, letterSpacing: '-0.055em', lineHeight: 1.0, color: '#F7F1E2', margin: '0 0 10px' }}>
+              The{' '}
+              <span style={{ background: 'linear-gradient(120deg, #F5E5C1 0%, #C9A96E 25%, #68B4FF 65%, #A78BFA 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Upgrade.</span>
             </h2>
-            <p
-              style={{
-                fontSize: compact ? '11px' : '12px',
-                lineHeight: 1.6,
-                color: 'rgba(237,233,227,0.42)',
-                maxWidth: '32ch',
-                margin: '0 auto',
-              }}
-            >
-              Less friction. More output. Every campaign stays in the same premium world.
+            <p style={{ fontSize: compact ? '11px' : '12.5px', lineHeight: 1.65, color: 'rgba(237,233,227,0.38)', maxWidth: '32ch', margin: '0 auto' }}>
+              Less friction. More output. Every campaign lives inside the same premium world.
             </p>
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: compact ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))',
-              gap: compact ? '10px' : '12px',
-              maxWidth: '1080px',
-              width: '100%',
-              margin: '0 auto',
-            }}
-          >
-            {upgradeStats.map((stat) => (
-              <UpgradeCard key={stat.label} stat={stat} />
-            ))}
+          <div style={{ display: 'grid', gridTemplateColumns: compact ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: compact ? '10px' : '14px', maxWidth: '1060px', width: '100%', margin: '0 auto' }}>
+            {upgradeStats.map((stat) => <UpgradeCard key={stat.label} stat={stat} />)}
           </div>
 
-          <div
-            ref={chipRowRef}
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: compact ? '8px' : '12px',
-              flexWrap: 'wrap',
-            }}
-          >
-            {['1 twin', 'Every campaign', 'Forever reusable'].map((item, index) => (
-              <div
-                key={item}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '999px',
-                  border: index === 1 ? '1px solid rgba(74,158,255,0.24)' : '1px solid rgba(201,169,110,0.2)',
-                  background: index === 1 ? 'rgba(74,158,255,0.08)' : 'rgba(201,169,110,0.08)',
-                  color: 'rgba(237,233,227,0.72)',
-                  fontSize: '8px',
-                  letterSpacing: '0.18em',
-                  textTransform: 'uppercase',
-                  fontWeight: 800,
-                }}
-              >
-                {item}
+          <div ref={chipRowRef} style={{ display: 'flex', justifyContent: 'center', gap: compact ? '8px' : '10px', flexWrap: 'wrap' }}>
+            {[
+              { label: '1 digital twin', accent: '#C9A96E' },
+              { label: 'Every campaign', accent: '#4A9EFF' },
+              { label: 'Forever reusable', accent: '#A78BFA' },
+            ].map(({ label, accent }) => (
+              <div key={label} style={{ padding: '7px 14px', borderRadius: '999px', border: `1px solid ${accent}22`, background: `${accent}0d`, color: 'rgba(237,233,227,0.65)', fontSize: '8px', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 800 }}>
+                {label}
               </div>
             ))}
           </div>
         </div>
       </div>
+
+      {/* Reveal curtain */}
+      <div ref={revealCurtainRef} style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 20,
+        background: 'radial-gradient(ellipse 70% 42% at 50% 58%, rgba(201,169,110,0.12), transparent 58%), linear-gradient(180deg, rgba(2,2,8,1) 0%, rgba(2,2,8,0.98) 58%, rgba(2,2,8,0.94) 100%)',
+      }} />
     </section>
   );
 }

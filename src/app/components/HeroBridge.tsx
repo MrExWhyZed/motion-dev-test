@@ -20,21 +20,81 @@ export default function HeroBridge() {
   const bridgeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let rafId: number;
-    const handleScroll = () => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        if (!bridgeRef.current) return;
-        const scrollY = window.scrollY;
-        const vh = window.innerHeight;
-        const progress = Math.max(0, Math.min(1, (scrollY - vh * 0.5) / (vh * 0.5)));
-        bridgeRef.current.style.opacity = `${progress}`;
-      });
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    if (!bridgeRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    let mounted = true;
+    let cleanup = () => {};
+
+    void (async () => {
+      const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+        import('gsap'),
+        import('gsap/ScrollTrigger'),
+      ]);
+
+      if (!mounted || !bridgeRef.current) return;
+
+      gsap.registerPlugin(ScrollTrigger);
+
+      const bridge = bridgeRef.current;
+      const particles = Array.from(bridge.querySelectorAll<HTMLElement>('[data-bridge-particle]'));
+
+      const ctx = gsap.context(() => {
+        gsap.set(bridge, { autoAlpha: 0 });
+        gsap.to(bridge, {
+          autoAlpha: 1,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: bridge,
+            start: 'top bottom',
+            end: 'bottom center',
+            scrub: 1,
+          },
+        });
+
+        particles.forEach((particle, index) => {
+          const { duration, delay } = bridgeParticles[index];
+
+          gsap.set(particle, {
+            y: -18,
+            scale: 1,
+            autoAlpha: 0,
+          });
+
+          gsap.timeline({
+            repeat: -1,
+            repeatDelay: 0.18,
+            delay,
+          })
+            .to(particle, {
+              autoAlpha: 1,
+              duration: duration * 0.14,
+              ease: 'sine.out',
+            })
+            .to(
+              particle,
+              {
+                y: 196,
+                scale: 0.38,
+                autoAlpha: 0.46,
+                duration: duration * 0.68,
+                ease: 'power1.in',
+              },
+              '<'
+            )
+            .to(particle, {
+              autoAlpha: 0,
+              duration: duration * 0.18,
+              ease: 'power1.out',
+            });
+        });
+      }, bridge);
+
+      cleanup = () => ctx.revert();
+    })();
+
     return () => {
-      window.removeEventListener('scroll', handleScroll);
-      cancelAnimationFrame(rafId);
+      mounted = false;
+      cleanup();
     };
   }, []);
 
@@ -62,6 +122,7 @@ export default function HeroBridge() {
       {bridgeParticles.map((p) => (
         <div
           key={p.id}
+          data-bridge-particle
           className="absolute rounded-full"
           style={{
             left: p.left,
@@ -69,20 +130,9 @@ export default function HeroBridge() {
             width: `${p.size}px`,
             height: `${p.size}px`,
             background: p.color,
-            animation: `bridge-descend ${p.duration}s ease-in infinite`,
-            animationDelay: `${p.delay}s`,
           }}
         />
       ))}
-
-      <style>{`
-        @keyframes bridge-descend {
-          0%   { transform: translateY(0px) scale(1);   opacity: 0;   }
-          10%  { opacity: 1; }
-          90%  { opacity: 0.5; }
-          100% { transform: translateY(180px) scale(0.4); opacity: 0; }
-        }
-      `}</style>
     </div>
   );
 }

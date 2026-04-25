@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 
 const testimonials = [
   {
@@ -10,7 +10,8 @@ const testimonials = [
     company: 'Maison Élite Paris',
     initials: 'CF',
     accent: '#C9A96E',
-    accentDark: '#a07840',
+    metric: '4 days',
+    metricLabel: 'delivery',
   },
   {
     quote: 'The digital twin they built of our serum is indistinguishable from a photograph. We launched three new colorways without a single shoot day.',
@@ -19,7 +20,8 @@ const testimonials = [
     company: 'Glacé Beauty London',
     initials: 'PN',
     accent: '#4A9EFF',
-    accentDark: '#1a6edf',
+    metric: '3×',
+    metricLabel: 'SKUs, zero shoots',
   },
   {
     quote: 'Our AR try-on feature increased add-to-cart rate by 38% in the first month. The interactive 3D viewer alone paid for the entire project.',
@@ -28,16 +30,18 @@ const testimonials = [
     company: 'Rouge Atelier Milan',
     initials: 'SM',
     accent: '#B06AB3',
-    accentDark: '#7a3d8a',
+    metric: '+38%',
+    metricLabel: 'add-to-cart',
   },
   {
-    quote: 'We replaced an entire in-house photography workflow with their pipeline. The quality is higher and our turnaround time dropped from weeks to hours.',
+    quote: 'We replaced an entire in-house photography workflow with their pipeline. Quality is higher and turnaround dropped from weeks to hours.',
     name: 'Lena Hartmann',
     title: 'Creative Lead',
     company: 'Lumière Studios Berlin',
     initials: 'LH',
     accent: '#F97066',
-    accentDark: '#c44035',
+    metric: 'Hours',
+    metricLabel: 'not weeks',
   },
   {
     quote: 'I was skeptical at first. Now our seasonal lookbook is entirely CGI and our customers cannot tell the difference — conversion is up 52%.',
@@ -46,7 +50,8 @@ const testimonials = [
     company: 'Sora Collective Tokyo',
     initials: 'YT',
     accent: '#34D399',
-    accentDark: '#0f9e68',
+    metric: '+52%',
+    metricLabel: 'conversion',
   },
   {
     quote: 'The level of craft in every render is astonishing. Our fragrance campaign visuals looked like a $500K production for a fraction of the cost.',
@@ -55,7 +60,8 @@ const testimonials = [
     company: 'Velour Parfums Paris',
     initials: 'ID',
     accent: '#FBBF24',
-    accentDark: '#c48a00',
+    metric: '10×',
+    metricLabel: 'cost savings',
   },
   {
     quote: "Motion Grace's team understood our brand DNA from day one. Every asset felt like it came from our own creative director, not an outside vendor.",
@@ -64,414 +70,223 @@ const testimonials = [
     company: 'ARCN New York',
     initials: 'MW',
     accent: '#60A5FA',
-    accentDark: '#2563eb',
+    metric: '100%',
+    metricLabel: 'brand match',
+  },
+  {
+    quote: 'Six months ago we had no digital content pipeline. Today we ship 40 assets a week across every channel. This is infrastructure, not just a vendor.',
+    name: 'Alara Yıldız',
+    title: 'Head of Brand',
+    company: 'Mirra Istanbul',
+    initials: 'AY',
+    accent: '#F472B6',
+    metric: '40/wk',
+    metricLabel: 'assets shipped',
   },
 ];
 
-const HexCard = ({ t, index, visible }) => {
-  const [hovered, setHovered] = useState(false);
+const row1 = testimonials.slice(0, 4);
+const row2 = testimonials.slice(4);
 
+function TestimonialCard({ t }: { t: typeof testimonials[0] }) {
   return (
     <div
-      className="hex-wrapper"
-      style={{ '--i': index, '--accent': t.accent, '--accent-dark': t.accentDark }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      style={{
+        flexShrink: 0,
+        width: '360px',
+        background: 'rgba(255,255,255,0.022)',
+        border: '1px solid rgba(255,255,255,0.07)',
+        borderRadius: '20px',
+        padding: '28px',
+        position: 'relative',
+        overflow: 'hidden',
+        marginRight: '16px',
+      }}
     >
-      <div className={`hex-card ${visible ? 'hex-visible' : ''} ${hovered ? 'hex-hovered' : ''}`}>
-        {/* Hex clip shape */}
-        <div className="hex-inner">
-          {/* Glow */}
-          <div className="hex-glow" />
-          {/* Stars */}
-          <div className="hex-stars">
-            {[...Array(5)].map((_, si) => (
-              <svg key={si} width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-              </svg>
-            ))}
+      {/* Accent top bar */}
+      <div style={{
+        position: 'absolute', top: 0, left: '28px', right: '28px', height: '1px',
+        background: `linear-gradient(90deg, transparent, ${t.accent}60, transparent)`,
+      }} />
+
+      {/* Metric pill */}
+      <div style={{
+        display: 'inline-flex', alignItems: 'baseline', gap: '6px',
+        background: `${t.accent}12`,
+        border: `1px solid ${t.accent}28`,
+        borderRadius: '100px',
+        padding: '4px 12px',
+        marginBottom: '18px',
+      }}>
+        <span style={{ fontSize: '15px', fontWeight: 800, color: t.accent, letterSpacing: '-0.03em' }}>
+          {t.metric}
+        </span>
+        <span style={{ fontSize: '10px', color: `${t.accent}90`, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          {t.metricLabel}
+        </span>
+      </div>
+
+      {/* Stars */}
+      <div style={{ display: 'flex', gap: '3px', marginBottom: '14px' }}>
+        {[...Array(5)].map((_, i) => (
+          <svg key={i} width="11" height="11" viewBox="0 0 24 24" fill={t.accent} style={{ opacity: 0.85 }}>
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+        ))}
+      </div>
+
+      {/* Quote */}
+      <p style={{
+        fontSize: '13.5px', lineHeight: 1.7, color: 'rgba(237,233,227,0.72)',
+        margin: '0 0 22px', letterSpacing: '-0.01em',
+      }}>
+        &ldquo;{t.quote}&rdquo;
+      </p>
+
+      {/* Author */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{
+          width: '36px', height: '36px', borderRadius: '50%',
+          background: `linear-gradient(135deg, ${t.accent}30, ${t.accent}10)`,
+          border: `1px solid ${t.accent}35`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '11px', fontWeight: 700, color: t.accent, letterSpacing: '0.04em',
+          flexShrink: 0,
+        }}>
+          {t.initials}
+        </div>
+        <div>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: '#F7F1E2', letterSpacing: '-0.02em' }}>
+            {t.name}
           </div>
-          {/* Quote mark */}
-          <div className="hex-quote-mark">&ldquo;</div>
-          {/* Quote text */}
-          <p className="hex-quote">{t.quote}</p>
-          {/* Divider */}
-          <div className="hex-divider" />
-          {/* Author */}
-          <div className="hex-author">
-            <div className="hex-avatar">
-              {t.initials}
-            </div>
-            <div className="hex-author-info">
-              <p className="hex-name">{t.name}</p>
-              <p className="hex-role">{t.title} · {t.company}</p>
-            </div>
+          <div style={{ fontSize: '11px', color: 'rgba(201,169,110,0.55)', letterSpacing: '0.01em' }}>
+            {t.title} · {t.company}
           </div>
         </div>
       </div>
     </div>
   );
-};
+}
 
-export default function TestimonialsSection() {
-  const sectionRef = useRef(null);
-  const [visibleCards, setVisibleCards] = useState([]);
+function MarqueeRow({ items, reverse = false }: { items: typeof testimonials; reverse?: boolean }) {
+  const trackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            testimonials.forEach((_, i) => {
-              setTimeout(() => {
-                setVisibleCards((prev) => [...new Set([...prev, i])]);
-              }, i * 120);
-            });
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-    if (sectionRef.current) observer.observe(sectionRef.current);
-    return () => observer.disconnect();
-  }, []);
+    const track = trackRef.current;
+    if (!track) return;
+    let x = 0;
+    const speed = reverse ? 0.38 : -0.38;
+    let raf: number;
+    const cardWidth = 376;
+    const totalWidth = items.length * cardWidth;
+
+    function tick() {
+      x += speed;
+      if (!reverse && x <= -totalWidth) x = 0;
+      if (reverse && x >= 0) x = -totalWidth;
+      track.style.transform = `translateX(${x}px)`;
+      raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [items, reverse]);
+
+  const doubled = [...items, ...items];
 
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    <div style={{ overflow: 'hidden', width: '100%', position: 'relative' }}>
+      <div style={{
+        position: 'absolute', left: 0, top: 0, bottom: 0, width: '120px', zIndex: 2,
+        background: 'linear-gradient(90deg, #020208, transparent)',
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute', right: 0, top: 0, bottom: 0, width: '120px', zIndex: 2,
+        background: 'linear-gradient(270deg, #020208, transparent)',
+        pointerEvents: 'none',
+      }} />
+      <div ref={trackRef} style={{ display: 'flex', willChange: 'transform' }}>
+        {doubled.map((t, i) => (
+          <TestimonialCard key={i} t={t} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
-        .testimonials-section {
-          padding: 72px 24px;
-          position: relative;
-          overflow: hidden;
-          font-family: 'Inter', sans-serif;
-          background: transparent;
-        }
+export default function TestimonialsSection() {
+  return (
+    <section
+      data-gsap-section="default"
+      style={{
+        background: 'linear-gradient(180deg, #020208 0%, #04040c 50%, #030309 100%)',
+        position: 'relative',
+        overflow: 'hidden',
+        padding: '96px 0 80px',
+      }}
+    >
+      {/* Ambient glow */}
+      <div style={{
+        position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)',
+        width: '80vw', height: '50vh',
+        background: 'radial-gradient(ellipse, rgba(201,169,110,0.045) 0%, transparent 65%)',
+        filter: 'blur(80px)', pointerEvents: 'none',
+      }} />
 
-        /* Subtle ambient bg glow */
-        .testimonials-section::before {
-          content: '';
-          position: absolute;
-          top: 10%;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 900px;
-          height: 500px;
-          background: radial-gradient(ellipse, rgba(201,169,110,0.06) 0%, transparent 70%);
-          pointer-events: none;
-          z-index: 0;
-        }
+      {/* Header */}
+      <div style={{ textAlign: 'center', marginBottom: '56px', padding: '0 24px', position: 'relative', zIndex: 1 }}>
+        <p style={{
+          fontSize: '9px', letterSpacing: '0.35em', textTransform: 'uppercase',
+          color: 'rgba(201,169,110,0.7)', fontWeight: 800, marginBottom: '14px',
+        }}>
+          CLIENT RESULTS
+        </p>
+        <h2 style={{
+          fontSize: 'clamp(2rem, 5vw, 3.5rem)', fontWeight: 900,
+          letterSpacing: '-0.05em', color: '#F7F1E2', margin: '0 0 16px',
+          lineHeight: 1.05,
+        }}>
+          Testimonials.
+        </h2>
+        <p style={{
+          fontSize: '15px', color: 'rgba(237,233,227,0.45)', maxWidth: '420px',
+          margin: '0 auto', lineHeight: 1.65, letterSpacing: '-0.01em',
+        }}>
+          From one-off shoots to perpetual content engines — the results speak.
+        </p>
+      </div>
 
-        .testimonials-inner {
-          max-width: 1100px;
-          margin: 0 auto;
-          position: relative;
-          z-index: 1;
-        }
+      {/* Marquee rows */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <MarqueeRow items={row1} />
+        <MarqueeRow items={row2} reverse />
+      </div>
 
-        /* Header */
-        .testimonials-header {
-          text-align: center;
-          margin-bottom: 56px;
-        }
-        .testimonials-eyebrow {
-          font-family: 'Inter', sans-serif;
-          font-size: 10px;
-          font-weight: 600;
-          letter-spacing: 0.22em;
-          text-transform: uppercase;
-          color: var(--primary, #C9A96E);
-          opacity: 0.8;
-          margin-bottom: 12px;
-        }
-        .testimonials-title {
-          font-family: 'Inter', sans-serif;
-          font-size: clamp(2rem, 5vw, 3.5rem);
-          font-weight: 700;
-          letter-spacing: -0.01em;
-          color: var(--foreground, #f0ede8);
-          line-height: 1.1;
-          margin: 0;
-        }
-        .testimonials-title em {
-          font-style: normal;
-          color: var(--primary, #C9A96E);
-        }
-
-        /* Honeycomb grid */
-        .hex-grid {
-          display: flex;
-          flex-wrap: wrap;
-          justify-content: center;
-          gap: 0;
-          /* Honeycomb offset rows */
-        }
-
-        /* Each wrapper offsets every other item */
-        .hex-wrapper {
-          width: calc(100% / 4);
-          max-width: 260px;
-          min-width: 200px;
-          padding: 6px;
-          position: relative;
-          /* Every other card in row is offset down */
-        }
-
-        /* Honeycomb row offset: items 2,4 shift down */
-        .hex-wrapper:nth-child(4n+2),
-        .hex-wrapper:nth-child(4n+4) {
-          margin-top: 56px;
-        }
-
-        /* Responsive */
-        @media (max-width: 900px) {
-          .hex-wrapper {
-            width: calc(100% / 3);
-          }
-          .hex-wrapper:nth-child(3n+2) {
-            margin-top: 50px;
-          }
-          .hex-wrapper:nth-child(4n+2),
-          .hex-wrapper:nth-child(4n+4) {
-            margin-top: 0;
-          }
-          .hex-wrapper:nth-child(3n+2) {
-            margin-top: 50px;
-          }
-        }
-
-        @media (max-width: 600px) {
-          .hex-wrapper {
-            width: 100%;
-            max-width: 360px;
-          }
-          .hex-wrapper:nth-child(n) {
-            margin-top: 0 !important;
-          }
-        }
-
-        /* Card */
-        .hex-card {
-          width: 100%;
-          opacity: 0;
-          transform: translateY(40px) scale(0.94);
-          transition:
-            opacity 0.65s cubic-bezier(0.22,1,0.36,1),
-            transform 0.65s cubic-bezier(0.22,1,0.36,1);
-          transition-delay: calc(var(--i) * 0.09s);
-        }
-        .hex-card.hex-visible {
-          opacity: 1;
-          transform: translateY(0) scale(1);
-        }
-
-        .hex-inner {
-          position: relative;
-          border-radius: 20px;
-          padding: 28px 24px 24px;
-          background: var(--card, rgba(18,16,14,0.7));
-          border: 1px solid rgba(255,255,255,0.07);
-          overflow: hidden;
-          cursor: default;
-          transition:
-            border-color 0.4s ease,
-            transform 0.4s cubic-bezier(0.22,1,0.36,1),
-            box-shadow 0.4s ease;
-          /* Clip to hexagon-ish shape via large border-radius */
-        }
-
-        .hex-card.hex-hovered .hex-inner {
-          border-color: color-mix(in srgb, var(--accent) 30%, transparent);
-          transform: translateY(-6px) scale(1.02);
-          box-shadow:
-            0 24px 48px -12px rgba(0,0,0,0.5),
-            0 0 0 1px color-mix(in srgb, var(--accent) 15%, transparent),
-            0 0 60px -20px var(--accent);
-        }
-
-        /* Animated background glow */
-        .hex-glow {
-          position: absolute;
-          inset: -50%;
-          background: radial-gradient(circle at 60% 40%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 60%);
-          opacity: 0;
-          transition: opacity 0.5s ease;
-          pointer-events: none;
-          z-index: 0;
-        }
-        .hex-card.hex-hovered .hex-glow {
-          opacity: 1;
-        }
-
-        /* Animated border shimmer */
-        .hex-inner::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          border-radius: 20px;
-          background: linear-gradient(
-            135deg,
-            transparent 0%,
-            color-mix(in srgb, var(--accent) 8%, transparent) 50%,
-            transparent 100%
-          );
-          opacity: 0;
-          transition: opacity 0.4s ease;
-          pointer-events: none;
-          z-index: 0;
-        }
-        .hex-card.hex-hovered .hex-inner::after {
-          opacity: 1;
-        }
-
-        /* Stars */
-        .hex-stars {
-          display: flex;
-          gap: 4px;
-          margin-bottom: 14px;
-          color: var(--accent);
-          opacity: 0.8;
-          position: relative;
-          z-index: 1;
-        }
-
-        /* Big decorative quote */
-        .hex-quote-mark {
-          font-family: 'Inter', sans-serif;
-          font-size: 72px;
-          line-height: 0.6;
-          color: var(--accent);
-          opacity: 0.18;
-          position: absolute;
-          top: 20px;
-          right: 18px;
-          font-weight: 300;
-          pointer-events: none;
-          z-index: 0;
-          transition: opacity 0.4s ease;
-        }
-        .hex-card.hex-hovered .hex-quote-mark {
-          opacity: 0.28;
-        }
-
-        /* Quote text */
-        .hex-quote {
-          font-family: 'Inter', sans-serif;
-          font-size: 15px;
-          font-weight: 300;
-          line-height: 1.8;
-          color: var(--muted-foreground, rgba(255,255,255,0.65));
-          margin: 0 0 18px 0;
-          position: relative;
-          z-index: 1;
-          letter-spacing: 0.01em;
-        }
-
-        /* Divider */
-        .hex-divider {
-          height: 1px;
-          background: linear-gradient(
-            90deg,
-            transparent,
-            color-mix(in srgb, var(--accent) 40%, transparent) 40%,
-            transparent
-          );
-          margin-bottom: 16px;
-          position: relative;
-          z-index: 1;
-        }
-
-        /* Author row */
-        .hex-author {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          position: relative;
-          z-index: 1;
-        }
-
-        /* Avatar */
-        .hex-avatar {
-          width: 38px;
-          height: 38px;
-          border-radius: 50%;
-          flex-shrink: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 11px;
-          font-weight: 600;
-          font-family: 'Inter', sans-serif;
-          letter-spacing: 0.05em;
-          color: var(--accent);
-          background: color-mix(in srgb, var(--accent) 12%, transparent);
-          border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
-          transition: background 0.3s ease, border-color 0.3s ease;
-        }
-        .hex-card.hex-hovered .hex-avatar {
-          background: color-mix(in srgb, var(--accent) 20%, transparent);
-          border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-        }
-
-        .hex-author-info { flex: 1; min-width: 0; }
-
-        .hex-name {
-          font-size: 13px;
-          font-weight: 500;
-          color: var(--foreground, rgba(255,255,255,0.92));
-          letter-spacing: -0.01em;
-          margin: 0 0 2px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .hex-role {
-          font-size: 11px;
-          font-weight: 300;
-          color: var(--muted-foreground, rgba(255,255,255,0.45));
-          letter-spacing: 0.02em;
-          margin: 0;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        /* Floating honeycomb dot accent */
-        .hex-bg-pattern {
-          position: absolute;
-          top: 0; left: 0; right: 0; bottom: 0;
-          pointer-events: none;
-          z-index: 0;
-          opacity: 0.025;
-          background-image:
-            radial-gradient(circle, rgba(201,169,110,1) 1px, transparent 1px);
-          background-size: 32px 32px;
-        }
-      `}</style>
-
-      <section id="testimonials" className="testimonials-section" ref={sectionRef}>
-        {/* Subtle dot pattern */}
-        <div className="hex-bg-pattern" />
-
-        <div className="testimonials-inner">
-          {/* Header */}
-          <div className="testimonials-header">
-            <p className="testimonials-eyebrow">Client Stories</p>
-            <h2 className="testimonials-title">
-              What Clients <em>Say</em>
-            </h2>
+      {/* Bottom stat bar */}
+      <div style={{
+        display: 'flex', justifyContent: 'center', gap: '48px',
+        marginTop: '56px', padding: '0 24px',
+        position: 'relative', zIndex: 1, flexWrap: 'wrap',
+      }}>
+        {[
+          { value: '200+', label: 'Brands served' },
+          { value: '12,000+', label: 'Assets delivered' },
+          { value: '4.9 / 5', label: 'Client satisfaction' },
+        ].map((s, i) => (
+          <div key={i} style={{ textAlign: 'center' }}>
+            <div style={{
+              fontSize: 'clamp(1.4rem, 3vw, 2rem)', fontWeight: 900,
+              letterSpacing: '-0.05em', color: '#C9A96E', lineHeight: 1,
+            }}>{s.value}</div>
+            <div style={{
+              fontSize: '10px', color: 'rgba(237,233,227,0.4)', marginTop: '5px',
+              letterSpacing: '0.06em', textTransform: 'uppercase',
+            }}>
+              {s.label}
+            </div>
           </div>
-
-          {/* Honeycomb Cards */}
-          <div className="hex-grid">
-            {testimonials.map((t, i) => (
-              <HexCard key={t.name} t={t} index={i} visible={visibleCards.includes(i)} />
-            ))}
-          </div>
-        </div>
-      </section>
-    </>
+        ))}
+      </div>
+    </section>
   );
 }

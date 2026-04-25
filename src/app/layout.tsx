@@ -2,6 +2,8 @@ import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import '../styles/tailwind.css';
+import HomeRouteTransition from '@/app/components/HomeRouteTransition';
+import SmoothScroll from '@/app/components/SmoothScroll';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -32,7 +34,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} dark`}>
       <body className={inter.className}>
+        <SmoothScroll />
         {children}
+        <HomeRouteTransition />
         <script
           type="module"
           async

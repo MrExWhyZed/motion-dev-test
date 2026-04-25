@@ -82,7 +82,7 @@ export default function ScrollAnimationInit() {
           const media = Array.from(section.querySelectorAll<HTMLElement>('[data-gsap-media]'));
           const glow = section.querySelector<HTMLElement>('[data-gsap-glow]');
 
-          if (mode !== 'sticky' && mode !== 'hero') {
+          if (mode !== 'sticky' && mode !== 'hero' && mode !== 'bridge') {
             gsap.fromTo(
               section,
               { autoAlpha: 0.72, y: 30 },

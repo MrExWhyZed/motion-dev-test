@@ -282,7 +282,7 @@ export default function ShowreelSection() {
 
         .sr-root {
           padding: 7rem 1.5rem 8rem;
-          background: #04040A;
+          background: linear-gradient(180deg, #020208 0%, #04040c 50%, #030309 100%);
           position: relative;
           overflow: hidden;
         }

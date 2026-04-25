@@ -57,10 +57,10 @@ export default function SolutionBridge() {
   // Red tint fades, gold glow rises
   const redOpacity = Math.max(0, 1 - progress * 2.5);
   const goldOpacity = Math.min(1, progress * 2);
-  // Background transitions from dark-red-toned to deep-blue-dark
-  const bgR = Math.round(6 + progress * 2);
-  const bgG = Math.round(4 + progress * 4);
-  const bgB = Math.round(8 + progress * 14);
+  // Background stays consistent with TransformationSection dark palette
+  const bgR = Math.round(2 + progress * 2);
+  const bgG = Math.round(2 + progress * 2);
+  const bgB = Math.round(8 + progress * 4);
 
   return (
     <div
@@ -69,9 +69,9 @@ export default function SolutionBridge() {
       style={{
         height: '380px',
         background: `linear-gradient(to bottom,
-          rgb(${bgR},4,8) 0%,
-          rgb(${Math.round(6+progress*2)},${Math.round(4+progress*6)},${Math.round(10+progress*18)}) 40%,
-          rgb(${Math.round(6+progress*2)},${Math.round(6+progress*8)},${Math.round(14+progress*20)}) 100%
+          rgb(${bgR},2,8) 0%,
+          rgb(${Math.round(2+progress*2)},${Math.round(2+progress*2)},${Math.round(9+progress*3)}) 40%,
+          rgb(${Math.round(3+progress*1)},${Math.round(3+progress*1)},${Math.round(9+progress*3)}) 100%
         )`,
         transition: 'background 0.1s linear',
       }}

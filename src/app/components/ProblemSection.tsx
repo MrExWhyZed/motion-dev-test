@@ -273,7 +273,7 @@ export default function ProblemSection() {
       <section
         ref={screen1Ref}
         className="relative overflow-hidden flex flex-col justify-center px-6 sm:px-10"
-        style={{ minHeight: '100vh', background: 'linear-gradient(to bottom, #04040A 0%, #080810 50%, #0A0508 100%)' }}
+        style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #020208 0%, #04040c 50%, #030309 100%)' }}
       >
         <div className="absolute inset-0 pointer-events-none" style={{
           opacity: 0.04 + distortLevel * 0.03,
@@ -338,7 +338,7 @@ export default function ProblemSection() {
           className="sticky top-0 overflow-hidden"
           style={{
             height: '100vh',
-            background: '#050508',
+            background: 'linear-gradient(180deg, #020208 0%, #04040c 50%, #030309 100%)',
             opacity: transitionOut ? 0 : 1,
             transition: 'opacity 1.1s cubic-bezier(0.4,0,0.2,1)',
             zIndex: 1,

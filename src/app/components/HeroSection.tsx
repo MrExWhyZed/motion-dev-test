@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { HERO_READY_EVENT, HERO_VIDEO_READY_EVENT } from './Preloader';
 
 /* ─── Deterministic particles (SSR-safe) ─────────────────────────────────── */
 const particles = Array.from({ length: 18 }, (_, i) => ({
@@ -45,6 +46,7 @@ type TaglineState = 'entering' | 'visible' | 'leaving';
 export default function HeroSection() {
   const heroRef    = useRef<HTMLElement>(null);
   const bgRef      = useRef<HTMLDivElement>(null);
+  const heroAuraRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const veilRef    = useRef<HTMLDivElement>(null);
   const heroParticlesRef = useRef<HTMLDivElement>(null);
@@ -55,6 +57,7 @@ export default function HeroSection() {
   const heroSublineRef = useRef<HTMLDivElement>(null);
   const heroDotsRef = useRef<HTMLDivElement>(null);
   const heroActionsRef = useRef<HTMLDivElement>(null);
+  const heroScrollCueRef = useRef<HTMLDivElement>(null);
   const heroStoryRef = useRef<HTMLDivElement>(null);
   const storyOverlayRef = useRef<HTMLDivElement>(null);
   const storyTitleBlockRef = useRef<HTMLDivElement>(null);
@@ -62,13 +65,39 @@ export default function HeroSection() {
   const storyCloseBtnRef = useRef<HTMLButtonElement>(null);
   const storyAnimationRef = useRef<{ close: () => void } | null>(null);
 
-  /* Preloader state — skip on refresh/revisit */
-  const hasSeenPreloader = typeof window !== 'undefined' && sessionStorage.getItem('mg_preloader_done') === '1';
-  const [preloaderPhase, setPreloaderPhase] = useState<
-    'wait' | 'loading' | 'fadeout' | 'done'
-  >(hasSeenPreloader ? 'done' : 'wait');
-  const [typeText,     setTypeText]     = useState('');
-  const [heroVisible,  setHeroVisible]  = useState(hasSeenPreloader);
+  // Always false on first render so SSR and client HTML match.
+  // A useEffect immediately corrects it for returning visitors (SPA nav).
+  const [heroVisible, setHeroVisible] = useState<boolean>(false);
+
+  /* ── Register preloader-done listener + signal hero is mounted ─── */
+  useEffect(() => {
+    // Check sessionStorage now (client-only) — if preloader already ran this
+    // session (SPA navigation), make hero visible immediately and skip setup.
+    const alreadyShown =
+      sessionStorage.getItem('mg_preloader_shown') === '1' ||
+      sessionStorage.getItem('mg_preloader_done') === '1';
+
+    if (alreadyShown) {
+      setHeroVisible(true);
+      return;
+    }
+
+    // 1. Register the done-listener FIRST, before we tell the preloader
+    //    we're ready. The preloader may fire PRELOADER_DONE_EVENT
+    //    synchronously the moment it receives HERO_READY_EVENT, so the
+    //    listener must already be in place.
+    const handleDone = () => setHeroVisible(true);
+    window.addEventListener('motionGracePreloaderDone', handleDone);
+
+    // 2. Pre-warm GSAP so imports are cached when heroVisible flips.
+    void Promise.all([import('gsap'), import('gsap/ScrollTrigger')]);
+
+    // 3. NOW signal the preloader that the hero DOM is ready.
+    window.dispatchEvent(new CustomEvent(HERO_READY_EVENT));
+
+    return () => window.removeEventListener('motionGracePreloaderDone', handleDone);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* Story overlay state */
   const [storyOpen,      setStoryOpen]      = useState(false);
@@ -76,6 +105,7 @@ export default function HeroSection() {
   const [storyExiting,   setStoryExiting]   = useState(false);
   const [viewBtnHovered, setViewBtnHovered] = useState(false);
   const storyScrollRef   = useRef<HTMLDivElement>(null);
+  const storyScrollContentRef = useRef<HTMLDivElement>(null);
   const storyOpenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* Story: "The Problem" title phase */
@@ -134,51 +164,6 @@ export default function HeroSection() {
   /* Hero headline cycling state */
   const [hlPhase, setHlPhase] = useState<'motionGrace'|'exitMG'|'createBuild'|'exitCB'>('motionGrace');
 
-  /* ── Typewriter engine ───────────────────────────────────────────────── */
-  useEffect(() => {
-    // Skip preloader if already seen this session
-    if (sessionStorage.getItem('mg_preloader_done') === '1') return;
-
-    const waitStr = 'Please Wait.....';
-    const loadStr = 'MotionGrace Is Loading..';
-    let timeout: ReturnType<typeof setTimeout>;
-
-    let i = 0;
-    const typeWait = () => {
-      if (i <= waitStr.length) {
-        setTypeText(waitStr.slice(0, i));
-        i++;
-        timeout = setTimeout(typeWait, 68);
-      } else {
-        timeout = setTimeout(() => {
-          setPreloaderPhase('loading');
-          let j = 0;
-          setTypeText('');
-
-          const typeLoad = () => {
-            if (j <= loadStr.length) {
-              setTypeText(loadStr.slice(0, j));
-              j++;
-              timeout = setTimeout(typeLoad, 48);
-            } else {
-              timeout = setTimeout(() => {
-                setPreloaderPhase('fadeout');
-                timeout = setTimeout(() => {
-                  setPreloaderPhase('done');
-                  setHeroVisible(true);
-                  sessionStorage.setItem('mg_preloader_done', '1');
-                }, 900);
-              }, 800);
-            }
-          };
-          typeLoad();
-        }, 550);
-      }
-    };
-    typeWait();
-
-    return () => clearTimeout(timeout);
-  }, []);
 
   /* ── Subheading typing engine ────────────────────────────────────────── */
   useEffect(() => {
@@ -269,6 +254,15 @@ export default function HeroSection() {
         heroRightWidgetRef.current,
       ].filter(Boolean);
 
+      // Hide children immediately (before paint) so there's no flash
+      // between heroVisible=true rendering and GSAP taking over
+      if (introTargets.length) {
+        (introTargets as HTMLElement[]).forEach(el => {
+          el.style.opacity = '0';
+          el.style.visibility = 'hidden';
+        });
+      }
+
       const ctx = gsap.context(() => {
         gsap.set(introTargets, {
           autoAlpha: 0,
@@ -314,6 +308,87 @@ export default function HeroSection() {
             duration: 0.9,
             stagger: 0.08,
           }, 0.22);
+
+        if (heroAuraRef.current) {
+          gsap.to(heroAuraRef.current, {
+            scale: 1.08,
+            autoAlpha: 0.84,
+            duration: 4.2,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut',
+          });
+        }
+
+        if (heroParticlesRef.current) {
+          const particleEls = Array.from(heroParticlesRef.current.querySelectorAll<HTMLElement>('[data-hero-particle]'));
+          particleEls.forEach((particle, index) => {
+            const config = particles[index];
+            gsap.to(particle, {
+              y: index % 2 === 0 ? -20 : 18,
+              x: index % 3 === 0 ? 12 : -10,
+              duration: config.duration,
+              delay: config.delay,
+              repeat: -1,
+              yoyo: true,
+              ease: 'sine.inOut',
+            });
+          });
+        }
+
+        if (heroRingsRef.current) {
+          const [outerRing, innerRing] = Array.from(heroRingsRef.current.children) as HTMLElement[];
+          if (outerRing) {
+            gsap.to(outerRing, {
+              rotation: 360,
+              duration: 42,
+              repeat: -1,
+              ease: 'none',
+              transformOrigin: '50% 50%',
+            });
+          }
+          if (innerRing) {
+            gsap.to(innerRing, {
+              rotation: -360,
+              duration: 34,
+              repeat: -1,
+              ease: 'none',
+              transformOrigin: '50% 50%',
+            });
+          }
+        }
+
+        if (heroLeftWidgetRef.current?.firstElementChild) {
+          gsap.to(heroLeftWidgetRef.current.firstElementChild, {
+            y: -12,
+            duration: 4.8,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut',
+          });
+        }
+
+        if (heroRightWidgetRef.current) {
+          gsap.to(Array.from(heroRightWidgetRef.current.children), {
+            y: -10,
+            duration: 4.6,
+            repeat: -1,
+            yoyo: true,
+            stagger: 0.2,
+            ease: 'sine.inOut',
+          });
+        }
+
+        if (heroScrollCueRef.current) {
+          gsap.to(heroScrollCueRef.current, {
+            y: 10,
+            autoAlpha: 0.24,
+            duration: 1.4,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut',
+          });
+        }
 
         const scrollTl = gsap.timeline({
           scrollTrigger: {
@@ -506,11 +581,11 @@ export default function HeroSection() {
                 resetStoryMotionState();
               },
             })
-              .to(titleHint, { opacity: 0, y: 8, duration: 0.18 }, 0)
-              .to(closeBtn, { opacity: 0, y: -10, duration: 0.2 }, 0)
-              .to(titleBlock, { opacity: 0, y: 26, scale: 0.98, filter: 'blur(10px)', duration: 0.28 }, 0)
-              .to(scrollInner, { opacity: 0.06, y: 18, duration: 0.3 }, 0.04)
-              .to(overlay, { opacity: 0, filter: 'blur(18px)', duration: 0.38 }, 0.02);
+              .to(titleHint,   { opacity: 0, y: 8,  duration: 0.2  }, 0)
+              .to(closeBtn,    { opacity: 0, y: -8, duration: 0.22 }, 0)
+              .to(titleBlock,  { opacity: 0, y: 20, scale: 0.98, filter: 'blur(8px)', duration: 0.3 }, 0)
+              .to(scrollInner, { opacity: 0, y: 14, duration: 0.3 }, 0.03)
+              .to(overlay,     { opacity: 0, filter: 'blur(14px)', duration: 0.38, ease: 'power2.in' }, 0.05);
           },
         };
       }, storyOverlayRef);
@@ -661,26 +736,89 @@ export default function HeroSection() {
     el.addEventListener('scroll', onScroll, { passive: true });
     handleScroll();
 
-    /* Detect extra wheel past the end → close overlay after ~3 deliberate scrolls */
+    /* Detect extra wheel past the end → close overlay after sustained scroll-past.
+       Instead of a hard 600px threshold, we accumulate momentum smoothly and
+       only fire once the user has clearly committed to scrolling past the end.
+       The momentum decays each frame so a stray tick doesn't trigger it.         */
+    let momentum = 0;
+    let decayRaf = 0;
+    const decayMomentum = () => {
+      momentum *= 0.88;          // decay rate — feels like inertia bleeding off
+      if (momentum > 1) decayRaf = requestAnimationFrame(decayMomentum);
+    };
+
     const handleWheel = (e: WheelEvent) => {
       const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
       if (atBottom && e.deltaY > 0) {
-        storyEndScrollRef.current += Math.abs(e.deltaY);
-        if (storyEndScrollRef.current >= 600) {   // ~3 trackpad swipes or mouse wheel clicks
-          storyEndScrollRef.current = 0;
+        momentum += Math.abs(e.deltaY);
+        cancelAnimationFrame(decayRaf);
+        decayRaf = requestAnimationFrame(decayMomentum);
+
+        if (momentum >= 520) {   // ~2-3 deliberate wheel ticks, now with decay
+          momentum = 0;
+          cancelAnimationFrame(decayRaf);
           closeStory();
         }
       } else if (!atBottom) {
-        storyEndScrollRef.current = 0;
+        momentum = 0;
+        cancelAnimationFrame(decayRaf);
       }
     };
     el.addEventListener('wheel', handleWheel, { passive: true });
 
     return () => {
       cancelAnimationFrame(rafId);
+      cancelAnimationFrame(decayRaf);
       el.removeEventListener('scroll', onScroll);
       el.removeEventListener('wheel', handleWheel);
       if (storyGlowTimerRef.current !== null) clearTimeout(storyGlowTimerRef.current);
+    };
+  }, [storyOpen]);
+
+  /* Story overlay gets its own Lenis instance so the internal narrative
+     scroll matches the rest of the site without interfering with page scroll. */
+  useEffect(() => {
+    if (!storyOpen || !storyScrollRef.current || !storyScrollContentRef.current) return;
+
+    let mounted = true;
+    let rafId = 0;
+    let cleanup = () => {};
+
+    const wrapper = storyScrollRef.current;
+    const content = storyScrollContentRef.current;
+    wrapper.scrollTop = 0;
+
+    void (async () => {
+      const { default: Lenis } = await import('lenis');
+      if (!mounted) return;
+
+      const lenis = new Lenis({
+        wrapper,
+        content,
+        autoRaf: false,
+        lerp: 0.1,
+        smoothWheel: true,
+        syncTouch: true,
+        touchMultiplier: 2.0,
+        wheelMultiplier: 1.0,
+      });
+
+      const raf = (time: number) => {
+        lenis.raf(time);
+        rafId = requestAnimationFrame(raf);
+      };
+
+      rafId = requestAnimationFrame(raf);
+
+      cleanup = () => {
+        cancelAnimationFrame(rafId);
+        lenis.destroy();
+      };
+    })();
+
+    return () => {
+      mounted = false;
+      cleanup();
     };
   }, [storyOpen]);
 
@@ -708,41 +846,7 @@ export default function HeroSection() {
 
   return (
     <>
-      {/* ════════════════════════════════════════════════════════════════
-          PRELOADER
-      ════════════════════════════════════════════════════════════════ */}
-      {preloaderPhase !== 'done' && (
-        <div
-          className="preloader-root"
-          style={{
-            opacity: preloaderPhase === 'fadeout' ? 0 : 1,
-            filter:  preloaderPhase === 'fadeout' ? 'blur(8px)' : 'none',
-          }}>
-          <div className="preloader-glow" />
-
-          <div className="preloader-content">
-            <p className="preloader-status">
-              {preloaderPhase === 'wait' ? '● INITIALIZING' : '● LOADING ASSETS'}
-            </p>
-
-            <div className="preloader-text-wrap">
-              <span
-                className="preloader-text"
-                style={{ textShadow: '0 0 40px rgba(201,169,110,0.6), 0 0 80px rgba(201,169,110,0.2)' }}>
-                {typeText}
-              </span>
-              <span className="preloader-cursor">|</span>
-            </div>
-
-            <div className="preloader-line">
-              <div
-                className="preloader-line-fill"
-                style={{ width: preloaderPhase === 'loading' ? '100%' : '45%' }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+  
 
       {/* ════════════════════════════════════════════════════════════════
           HERO SECTION
@@ -751,6 +855,7 @@ export default function HeroSection() {
         ref={heroRef}
         data-gsap-section="hero"
         className="hero-section"
+        data-instant={heroVisible ? 'true' : undefined}
         style={{
           opacity:   heroVisible ? 1 : 0,
           transform: heroVisible ? 'scale(1)' : 'scale(0.97)',
@@ -760,20 +865,31 @@ export default function HeroSection() {
         {/* ── Background Video Layer ─────────────────────────────── */}
         <div ref={bgRef} className="hero-bg-layer" style={{ top: '-15%', height: '130%' }}>
           <div className="hero-video-wrap">
-            <iframe
-              allow="fullscreen;autoplay"
-              allowFullScreen
-              src="https://streamable.com/e/b3drvz?autoplay=1&muted=1&nocontrols=1"
+            <video
+              autoPlay
+              muted
+              loop
+              playsInline
+              disablePictureInPicture
+              onCanPlay={() => window.dispatchEvent(new CustomEvent(HERO_VIDEO_READY_EVENT))}
               style={{
-                border: 'none', width: '100%', height: '100%',
-                position: 'absolute', left: 0, top: 0, pointerEvents: 'none',
+                position: 'absolute', inset: 0,
+                width: '100%', height: '100%',
+                objectFit: 'cover',
+                pointerEvents: 'none',
               }}
-            />
+            >
+              <source src="https://res.cloudinary.com/ddgyx80f6/video/upload/v1777018856/hero-bg_wbazfm.mp4" type="video/mp4" />
+            </video>
           </div>
 
           <div className="absolute inset-0 bg-gradient-to-b from-[#04040A]/80 via-[#04040A]/30 to-[#04040A]/95 z-10" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#04040A]/70 via-transparent to-[#04040A]/70 z-10" />
-          <div className="absolute inset-0 z-10 animate-breathe" style={{ background: 'radial-gradient(ellipse 60% 35% at 50% 0%, rgba(201,169,110,0.10) 0%, transparent 60%)' }} />
+          <div
+            ref={heroAuraRef}
+            className="absolute inset-0 z-10"
+            style={{ background: 'radial-gradient(ellipse 60% 35% at 50% 0%, rgba(201,169,110,0.10) 0%, transparent 60%)' }}
+          />
           <div className="absolute inset-0 z-10" style={{ background: 'radial-gradient(ellipse 25% 70% at 0% 50%, rgba(201,169,110,0.06) 0%, transparent 60%), radial-gradient(ellipse 25% 70% at 100% 50%, rgba(74,158,255,0.05) 0%, transparent 60%)' }} />
           <div className="hero-grain z-20" />
           <div ref={veilRef} className="hero-golden-veil z-20" />
@@ -784,13 +900,12 @@ export default function HeroSection() {
           {particles.map((p) => (
             <div
               key={p.id}
+              data-hero-particle
               className="absolute rounded-full will-change-transform"
               style={{
                 left: p.left, top: p.top,
                 width: `${p.size}px`, height: `${p.size}px`,
                 background: p.color, boxShadow: p.glow,
-                animation: `hero-float-particle ${p.duration}s ease-in-out infinite`,
-                animationDelay: `${p.delay}s`,
               }}
             />
           ))}
@@ -799,12 +914,11 @@ export default function HeroSection() {
         {/* ── Decorative Rings ──────────────────────────────────── */}
         <div ref={heroRingsRef} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10">
           <div
-            className="w-[700px] h-[700px] sm:w-[1000px] sm:h-[1000px] rounded-full border border-primary/[0.05] animate-rotate-slow"
+            className="w-[700px] h-[700px] sm:w-[1000px] sm:h-[1000px] rounded-full border border-primary/[0.05]"
             style={{ borderStyle: 'dashed' }}
           />
           <div
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[460px] h-[460px] sm:w-[700px] sm:h-[700px] rounded-full border border-accent/[0.04]"
-            style={{ animation: 'rotate-slow 48s linear infinite reverse' }}
           />
         </div>
 
@@ -812,12 +926,8 @@ export default function HeroSection() {
         <div
           ref={heroLeftWidgetRef}
           className="hero-widget hero-widget-left"
-          style={{
-            opacity: heroVisible ? 1 : 0,
-            transform: heroVisible ? 'translateX(0) translateY(-50%)' : 'translateX(-40px) translateY(-50%)',
-            transition: 'opacity 0.9s cubic-bezier(0.16,1,0.3,1) 1.2s, transform 0.9s cubic-bezier(0.16,1,0.3,1) 1.2s',
-          }}>
-          <div className="glass-dark rounded-2xl p-5 flex items-center gap-3.5" style={{ animation: 'float-gentle 8s ease-in-out infinite' }}>
+          style={{ opacity: 0 }}>
+          <div className="glass-dark rounded-2xl p-5 flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-primary/[0.1] flex items-center justify-center flex-shrink-0">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -834,14 +944,10 @@ export default function HeroSection() {
         <div
           ref={heroRightWidgetRef}
           className="hero-widget hero-widget-right"
-          style={{
-            opacity: heroVisible ? 1 : 0,
-            transform: heroVisible ? 'translateX(0) translateY(-50%)' : 'translateX(40px) translateY(-50%)',
-            transition: 'opacity 0.9s cubic-bezier(0.16,1,0.3,1) 1.4s, transform 0.9s cubic-bezier(0.16,1,0.3,1) 1.4s',
-          }}>
-          <div className="glass-dark rounded-2xl p-5 flex-shrink-0" style={{ animation: 'float-gentle-reverse 9s ease-in-out infinite' }}>
+          style={{ opacity: 0 }}>
+          <div className="glass-dark rounded-2xl p-5 flex-shrink-0">
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-accent animate-breathe" />
+              <div className="w-1.5 h-1.5 rounded-full bg-accent" />
               <span className="text-[10px] text-muted-foreground font-medium tracking-wide">Live Render</span>
               <span className="ml-auto text-[10px] text-accent font-mono">98%</span>
             </div>
@@ -852,7 +958,7 @@ export default function HeroSection() {
             </div>
           </div>
 
-          <div className="glass-dark rounded-2xl p-5 flex items-center gap-3.5 flex-shrink-0" style={{ animation: 'float-gentle 8s ease-in-out infinite', animationDelay: '2.4s' }}>
+          <div className="glass-dark rounded-2xl p-5 flex items-center gap-3.5 flex-shrink-0">
             <div className="w-10 h-10 rounded-xl bg-secondary/[0.1] flex items-center justify-center flex-shrink-0">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="10" stroke="var(--secondary)" strokeWidth="1.5" />
@@ -876,9 +982,7 @@ export default function HeroSection() {
             ref={heroHeadlineRef}
             className="mb-4"
             style={{
-              opacity: heroVisible ? 1 : 0,
-              transform: heroVisible ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'opacity 1s cubic-bezier(0.16,1,0.3,1) 0.3s, transform 1s cubic-bezier(0.16,1,0.3,1) 0.3s',
+              opacity: 0,
               position: 'relative',
               height: 'clamp(3.2rem, 7.5vw, 6rem)',
               width: '100%',
@@ -918,8 +1022,7 @@ export default function HeroSection() {
             ref={heroSublineRef}
             className="mb-8"
             style={{
-              opacity: heroVisible ? 1 : 0,
-              transition: 'opacity 0.8s ease 0.8s',
+              opacity: 0,
               minHeight: '1.6em',
               display: 'flex',
               alignItems: 'center',
@@ -936,8 +1039,7 @@ export default function HeroSection() {
             ref={heroDotsRef}
             className="flex items-center gap-2 mb-10"
             style={{
-              opacity: heroVisible ? 1 : 0,
-              transition: 'opacity 0.8s ease 1.4s',
+              opacity: 0,
             }}>
             {sublines.map((_, i) => (
               <div
@@ -956,9 +1058,7 @@ export default function HeroSection() {
           <div
             ref={heroActionsRef}
             style={{
-              opacity: heroVisible ? 1 : 0,
-              transform: heroVisible ? 'translateY(0)' : 'translateY(16px)',
-              transition: 'opacity 0.9s cubic-bezier(0.16,1,0.3,1) 1.1s, transform 0.9s cubic-bezier(0.16,1,0.3,1) 1.1s',
+              opacity: 0,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -974,9 +1074,9 @@ export default function HeroSection() {
             {/* ── Scroll indicator ─────────────────────────── */}
             <div
               className="flex flex-col items-center gap-2"
-              style={{ opacity: heroVisible ? 0.4 : 0, transition: 'opacity 1s ease 1.6s' }}>
+              style={{ opacity: 0 }}>
               <span className="text-[9px] tracking-[0.25em] uppercase text-muted-foreground">Scroll</span>
-              <div className="w-px h-10 bg-gradient-to-b from-primary/60 to-transparent animate-scroll-bounce" />
+              <div ref={heroScrollCueRef} className="w-px h-10 bg-gradient-to-b from-primary/60 to-transparent" />
             </div>
           </div>
         </div>
@@ -988,11 +1088,10 @@ export default function HeroSection() {
             bottom: '2.5rem',
             left: '2rem',
             zIndex: 30,
-            opacity: heroVisible ? 1 : 0,
-            transform: heroVisible ? 'translateY(0)' : 'translateY(12px)',
-            transition: 'opacity 1s ease 1.8s, transform 1s ease 1.8s',
+            opacity: 0,
           }}>
           <button
+            onClick={openStory}
             onMouseEnter={() => { setViewBtnHovered(true); storyOpenTimerRef.current = setTimeout(openStory, 720); }}
             onMouseLeave={() => { setViewBtnHovered(false); if (storyOpenTimerRef.current) { clearTimeout(storyOpenTimerRef.current); storyOpenTimerRef.current = null; } }}
             className="view-story-btn"
@@ -1003,12 +1102,12 @@ export default function HeroSection() {
               <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
                 <circle
                   cx="18" cy="18" r="15"
-                  stroke="rgba(201,169,110,0.3)"
+                  stroke="rgba(255,255,255,0.2)"
                   strokeWidth="1"
                 />
                 <circle
                   cx="18" cy="18" r="15"
-                  stroke="rgba(201,169,110,0.85)"
+                  stroke="rgba(255,255,255,0.85)"
                   strokeWidth="1.5"
                   strokeDasharray="94"
                   strokeDashoffset={viewBtnHovered ? "0" : "94"}
@@ -1018,7 +1117,7 @@ export default function HeroSection() {
                 {/* Play triangle */}
                 <polygon
                   points="14,12 25,18 14,24"
-                  fill={viewBtnHovered ? "rgba(201,169,110,1)" : "rgba(201,169,110,0.55)"}
+                  fill={viewBtnHovered ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.55)"}
                   style={{ transition: 'fill 0.3s ease' }}
                 />
               </svg>
@@ -1039,7 +1138,7 @@ export default function HeroSection() {
           ref={storyOverlayRef}
           className="story-overlay"
           style={{
-            opacity: storyExiting ? 0 : storyVisible ? 1 : storyFlickerOpacity,
+            opacity: storyVisible ? 1 : storyFlickerOpacity,
             transition: 'none',
           }}
         >
@@ -1053,6 +1152,7 @@ export default function HeroSection() {
 
           {/* ── Scrollable container — all screens live here ── */}
           <div ref={storyScrollRef} className="story-scroll-inner">
+            <div ref={storyScrollContentRef}>
 
             {/* ════ SCREEN 1: "THE PROBLEM" title ════ */}
             <div className="story-title-screen">
@@ -1298,6 +1398,7 @@ export default function HeroSection() {
               </div>
 
             </div>{/* end combined */}
+            </div>
           </div>{/* end story-scroll-inner */}
         </div>
       )}
@@ -1306,56 +1407,6 @@ export default function HeroSection() {
           SCOPED STYLES
       ════════════════════════════════════════════════════════════════ */}
       <style>{`
-        /* ── Preloader ───────────────────────────────────────────── */
-        .preloader-root {
-          position: fixed; inset: 0; z-index: 9999;
-          background: #000;
-          display: flex; align-items: center; justify-content: center;
-          transition: opacity 0.9s cubic-bezier(0.4,0,0.2,1),
-                      filter  0.9s cubic-bezier(0.4,0,0.2,1);
-          will-change: opacity, filter;
-        }
-        .preloader-glow {
-          position: absolute; top: 50%; left: 50%;
-          transform: translate(-50%,-50%);
-          width: 500px; height: 300px; border-radius: 50%;
-          background: radial-gradient(ellipse at center, rgba(201,169,110,0.08) 0%, transparent 70%);
-          pointer-events: none;
-          animation: breathe 4s ease-in-out infinite;
-        }
-        .preloader-content {
-          display: flex; flex-direction: column; align-items: center;
-          gap: 1.5rem; position: relative; z-index: 1;
-        }
-        .preloader-status {
-          font-size: 9px; letter-spacing: 0.25em; text-transform: uppercase;
-          color: rgba(201,169,110,0.45); font-family: var(--font-sans); margin: 0;
-          animation: breathe 2s ease-in-out infinite;
-        }
-        .preloader-text-wrap { display: flex; align-items: center; min-height: 1.2em; }
-        .preloader-text {
-          font-size: clamp(1.1rem, 4vw, 1.8rem); font-weight: 300;
-          letter-spacing: 0.06em; color: rgba(237,233,227,0.9);
-          font-family: var(--font-sans);
-        }
-        .preloader-cursor {
-          font-size: clamp(1.1rem, 4vw, 1.8rem); font-weight: 100;
-          color: rgba(201,169,110,0.9);
-          animation: preloader-blink 0.8s step-end infinite;
-          text-shadow: 0 0 12px rgba(201,169,110,0.8);
-          line-height: 1; margin-left: 1px;
-        }
-        @keyframes preloader-blink { 0%,100%{opacity:1} 50%{opacity:0} }
-        .preloader-line {
-          width: 180px; height: 1px; background: rgba(255,255,255,0.06);
-          border-radius: 1px; overflow: hidden;
-        }
-        .preloader-line-fill {
-          height: 100%;
-          background: linear-gradient(90deg, transparent 0%, rgba(201,169,110,0.8) 50%, rgba(201,169,110,0.4) 100%);
-          transition: width 1.8s cubic-bezier(0.4,0,0.2,1); border-radius: 1px;
-        }
-
         /* ── Hero Section ────────────────────────────────────────── */
         .hero-section {
           position: relative; min-height: 100svh;
@@ -1366,10 +1417,14 @@ export default function HeroSection() {
                       filter  1.0s cubic-bezier(0.16,1,0.3,1) 0.1s;
           will-change: opacity, transform, filter;
         }
+        .hero-section[data-instant='true'] {
+          transition: none !important;
+        }
         .hero-bg-layer { position: absolute; left: 0; right: 0; bottom: 0; will-change: transform; }
         .hero-video-wrap {
-          position: relative; width: 100%; height: 0; padding-bottom: 56.25%;
+          position: absolute; inset: 0;
           transform: scale(1.8); transform-origin: center center;
+          overflow: hidden;
         }
         .hero-grain {
           position: absolute; inset: 0; pointer-events: none; opacity: 0.032;
@@ -1515,11 +1570,12 @@ export default function HeroSection() {
         }
         .typing-cursor {
           color: rgba(201,169,110,0.9);
-          animation: preloader-blink 0.8s step-end infinite;
+          animation: cursor-blink 0.8s step-end infinite;
           text-shadow: 0 0 10px rgba(201,169,110,0.7);
           margin-left: 1px;
           font-weight: 100;
         }
+        @keyframes cursor-blink { 0%,100%{opacity:1} 50%{opacity:0} }
 
         /* ── GET STARTED BUTTON  — minimal ghost style
         ══════════════════════════════════════════════════════════ */
@@ -1566,12 +1622,12 @@ export default function HeroSection() {
         .story-label-text {
           font-size: 0.65rem; font-weight: 500;
           letter-spacing: 0.18em; text-transform: uppercase;
-          color: rgba(201,169,110,0.75); transition: color 0.3s ease;
+          color: rgba(255,255,255,0.65); transition: color 0.3s ease;
           font-family: var(--font-sans);
         }
-        .view-story-btn:hover .story-label-text { color: rgba(232,212,160,1); }
+        .view-story-btn:hover .story-label-text { color: rgba(255,255,255,1); }
         .story-label-line {
-          display: block; height: 1px; background: rgba(201,169,110,0.7);
+          display: block; height: 1px; background: rgba(255,255,255,0.6);
           transition: width 0.5s cubic-bezier(0.4,0,0.2,1); margin-top: 3px;
         }
 

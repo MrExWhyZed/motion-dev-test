@@ -5,34 +5,93 @@ import AppImage from '@/components/ui/AppImage';
 import Link from 'next/link';
 
 export default function CTASection() {
+  const sectionRef = useRef<HTMLElement>(null);
   const bgRef = useRef<HTMLDivElement>(null);
+  const auraRef = useRef<HTMLDivElement>(null);
+  const outerRingRef = useRef<HTMLDivElement>(null);
+  const innerRingRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let rafId: number;
+    if (!sectionRef.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-    const handleScroll = () => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        if (!bgRef.current) return;
-        const rect = bgRef.current.closest('section')?.getBoundingClientRect();
-        if (!rect) return;
-        const offset = -rect.top * 0.18;
-        bgRef.current.style.transform = `translateY(${offset}px)`;
-      });
-    };
+    let mounted = true;
+    let cleanup = () => {};
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    void (async () => {
+      const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+        import('gsap'),
+        import('gsap/ScrollTrigger'),
+      ]);
+
+      if (!mounted || !sectionRef.current) return;
+
+      gsap.registerPlugin(ScrollTrigger);
+
+      const section = sectionRef.current;
+
+      const ctx = gsap.context(() => {
+        if (bgRef.current) {
+          gsap.set(bgRef.current, { yPercent: -4, scale: 1.06 });
+          gsap.to(bgRef.current, {
+            yPercent: 7,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: section,
+              start: 'top bottom',
+              end: 'bottom top',
+              scrub: 1.2,
+            },
+          });
+        }
+
+        if (auraRef.current) {
+          gsap.to(auraRef.current, {
+            scale: 1.08,
+            opacity: 0.85,
+            duration: 3.2,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut',
+          });
+        }
+
+        if (outerRingRef.current) {
+          gsap.to(outerRingRef.current, {
+            rotation: 360,
+            duration: 38,
+            repeat: -1,
+            ease: 'none',
+            transformOrigin: '50% 50%',
+          });
+        }
+
+        if (innerRingRef.current) {
+          gsap.to(innerRingRef.current, {
+            rotation: -360,
+            duration: 30,
+            repeat: -1,
+            ease: 'none',
+            transformOrigin: '50% 50%',
+          });
+        }
+      }, section);
+
+      cleanup = () => ctx.revert();
+    })();
+
     return () => {
-      window.removeEventListener('scroll', handleScroll);
-      cancelAnimationFrame(rafId);
+      mounted = false;
+      cleanup();
     };
   }, []);
 
   return (
     <section
+      ref={sectionRef}
       id="cta"
       data-gsap-section="default"
-      className="relative min-h-[80vh] flex items-center justify-center overflow-hidden px-6 sm:px-10 py-28 sm:py-40">
+      className="relative min-h-[80vh] flex items-center justify-center overflow-hidden px-6 sm:px-10 py-28 sm:py-40"
+      style={{ background: 'linear-gradient(180deg, #020208 0%, #04040c 50%, #030309 100%)' }}>
 
       {/* Background */}
       <div ref={bgRef} className="absolute inset-0 will-change-transform" style={{ top: '-10%', height: '120%' }}>
@@ -45,8 +104,10 @@ export default function CTASection() {
         {/* Layered overlays for depth */}
         <div className="absolute inset-0 bg-gradient-to-b from-background via-background/40 to-background" />
         <div
-          className="absolute inset-0 animate-breathe"
+          ref={auraRef}
+          className="absolute inset-0"
           style={{
+            opacity: 0.58,
             background: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(201,169,110,0.07) 0%, transparent 70%)'
           }} />
       </div>
@@ -54,11 +115,13 @@ export default function CTASection() {
       {/* Decorative rings */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
         <div
-          className="w-[600px] h-[600px] sm:w-[800px] sm:h-[800px] rounded-full border border-primary/5 animate-rotate-slow"
+          ref={outerRingRef}
+          className="w-[600px] h-[600px] sm:w-[800px] sm:h-[800px] rounded-full border border-primary/5"
           style={{ borderStyle: 'dashed' }} />
         <div
+          ref={innerRingRef}
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] sm:w-[560px] sm:h-[560px] rounded-full border border-primary/3"
-          style={{ animation: 'rotate-slow 50s linear infinite reverse' }} />
+        />
       </div>
 
       {/* Content */}
@@ -91,10 +154,10 @@ export default function CTASection() {
           <Link
             href="/add-project"
             data-gsap-button="primary"
-            className="group relative px-10 py-4 rounded-full text-xs font-semibold uppercase tracking-[0.18em] text-primary-foreground bg-primary hover:opacity-95 transition-all duration-700 animate-pulse-gold overflow-hidden">
+            className="group relative px-10 py-4 rounded-full text-xs font-semibold uppercase tracking-[0.18em] text-primary-foreground bg-primary hover:opacity-95 transition-all duration-700 overflow-hidden">
             <span className="relative z-10">Add Project</span>
             <div className="absolute inset-0 overflow-hidden opacity-0 group-hover:opacity-100">
-              <div className="absolute top-0 left-0 w-1/4 h-full bg-gold-shimmer animate-light-sweep" />
+              <div className="absolute top-0 left-0 w-1/4 h-full bg-gold-shimmer" />
             </div>
           </Link>
 
@@ -126,7 +189,7 @@ export default function CTASection() {
       <div className="sticky-cta-mobile sm:hidden">
         <Link
           href="/add-project"
-          className="px-8 py-3.5 rounded-full text-xs font-semibold uppercase tracking-[0.18em] text-primary-foreground bg-primary shadow-2xl animate-pulse-gold">
+          className="px-8 py-3.5 rounded-full text-xs font-semibold uppercase tracking-[0.18em] text-primary-foreground bg-primary shadow-2xl">
           Add Project
         </Link>
       </div>

@@ -51,16 +51,17 @@
   "dependencies": {
     "@dhiwise/component-tagger": "^1.0.15",
     "@heroicons/react": "^2.2.0",
+    "@supabase/supabase-js": "latest",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.16",
+    "gsap": "latest",
+    "lenis": "^1.3.23",
+    "lucide-react": "^1.7.0",
     "next": "15.1.11",
     "react": "19.0.3",
     "react-dom": "19.0.3",
-    "recharts": "^2.15.2",
-    "lucide-react": "^1.7.0",
-    "@supabase/supabase-js": "latest",
-    "gsap": "latest",
-    "react-hook-form": "^7.73.1"
+    "react-hook-form": "^7.73.1",
+    "recharts": "^2.15.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
