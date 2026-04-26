@@ -680,6 +680,7 @@ export default function ServicesSection() {
               <button
                 onClick={() => setActiveAccordion(activeAccordion === service.id ? null : service.id)}
                 className="flex w-full items-center justify-between gap-4 p-5 text-left"
+                data-cursor="button"
               >
                 <div className="flex items-center gap-4">
                   <div

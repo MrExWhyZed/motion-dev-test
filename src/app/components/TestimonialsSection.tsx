@@ -223,6 +223,8 @@ export default function TestimonialsSection() {
         position: 'relative',
         overflow: 'hidden',
         padding: '96px 0 80px',
+        isolation: 'isolate',
+        zIndex: 1,
       }}
     >
       {/* Ambient glow */}

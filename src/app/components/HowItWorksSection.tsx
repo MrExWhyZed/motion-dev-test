@@ -2,34 +2,42 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 
+// Build-Forever gradient stops: blue → purple → red → orange
+const CARD_ACCENTS = ['#0894ff', '#c959dd', '#ff2e54', '#ff9004'];
+const CARD_ACCENT_RGBS = ['8,148,255', '201,89,221', '255,46,84', '255,144,4'];
+
 const steps = [
   {
     number: '01',
     phase: 'Brief',
     title: 'Configure & Customize',
     body: 'Select your package, choose your Virtual Set, define your motion style, and upload label files. No meetings — just clear, creative direction.',
-    accent: '#C9A96E',
+    accent: CARD_ACCENTS[0],
+    accentRgb: CARD_ACCENT_RGBS[0],
   },
   {
     number: '02',
     phase: 'Payment',
     title: 'Secure Your Slot',
     body: "Place your 50% deposit to lock in your studio slot — we immediately begin building your product's Digital Twin.",
-    accent: '#A0DC64',
+    accent: CARD_ACCENTS[1],
+    accentRgb: CARD_ACCENT_RGBS[1],
   },
   {
     number: '03',
     phase: 'Production',
     title: 'Track & Preview',
     body: 'Log in to your Client Dashboard for real-time progress. Watch previews render live and request revisions with annotations.',
-    accent: '#C9A96E',
+    accent: CARD_ACCENTS[2],
+    accentRgb: CARD_ACCENT_RGBS[2],
   },
   {
     number: '04',
     phase: 'Delivery',
     title: 'The Launch Kit',
     body: 'Upon final approval, unlock your complete asset library — 4K video, transparent kits, and AR files in one click.',
-    accent: '#C9A96E',
+    accent: CARD_ACCENTS[3],
+    accentRgb: CARD_ACCENT_RGBS[3],
   },
 ];
 
@@ -86,9 +94,10 @@ function useCardTilt(intensity = 7) {
 }
 
 /* ── Minimal card ── */
-function WorkflowCard({ step, index }: { step: typeof steps[0]; index: number }) {
+function WorkflowCard({ step, index }: { step: (typeof steps)[0]; index: number }) {
   const { ref, live, onMouseMove, onMouseEnter, onMouseLeave } = useCardTilt(6);
   const radii = ['20px 0 0 0', '0 20px 0 0', '0 0 0 20px', '0 0 20px 0'];
+  const rgb = step.accentRgb;
 
   return (
     <div
@@ -108,9 +117,9 @@ function WorkflowCard({ step, index }: { step: typeof steps[0]; index: number })
           overflow: 'hidden',
           /* solid dark bg — no gradient-as-border trick that causes the fill bug */
           background: 'rgba(10,10,19,0.98)',
-          border: `1px solid ${live.active ? step.accent + '28' : 'rgba(237,233,227,0.06)'}`,
+          border: `1px solid ${live.active ? `rgba(${rgb},0.28)` : 'rgba(237,233,227,0.06)'}`,
           boxShadow: live.active
-            ? `0 32px 64px rgba(0,0,0,0.55), 0 0 0 1px ${step.accent}18`
+            ? `0 32px 64px rgba(0,0,0,0.55), 0 0 0 1px rgba(${rgb},0.18), 0 0 60px rgba(${rgb},0.12)`
             : 'none',
           transform: `rotateX(${live.rx}deg) rotateY(${live.ry}deg) translateY(${live.active ? -6 : 0}px)`,
           transition: live.active
@@ -123,7 +132,7 @@ function WorkflowCard({ step, index }: { step: typeof steps[0]; index: number })
         {/* Mouse-tracking radial glow */}
         <div style={{
           position: 'absolute', inset: 0, pointerEvents: 'none',
-          background: `radial-gradient(ellipse 65% 55% at ${live.gx}% ${live.gy}%, ${step.accent}14 0%, transparent 70%)`,
+          background: `radial-gradient(ellipse 65% 55% at ${live.gx}% ${live.gy}%, rgba(${rgb},0.14) 0%, transparent 70%)`,
           opacity: live.active ? 1 : 0,
           transition: live.active ? 'none' : 'opacity 600ms ease',
         }} />
@@ -132,14 +141,14 @@ function WorkflowCard({ step, index }: { step: typeof steps[0]; index: number })
         <div style={{
           position: 'absolute', bottom: '-20%', right: '-10%',
           width: '60%', height: '60%',
-          background: `radial-gradient(circle, ${step.accent}08 0%, transparent 70%)`,
+          background: `radial-gradient(circle, rgba(${rgb},0.08) 0%, transparent 70%)`,
           pointerEvents: 'none', filter: 'blur(32px)',
         }} />
 
         {/* Top accent line */}
         <div style={{
           position: 'absolute', top: 0, left: '10%', right: '10%', height: 1,
-          background: `linear-gradient(90deg, transparent, ${step.accent}${live.active ? 'bb' : '2a'}, transparent)`,
+          background: `linear-gradient(90deg, transparent, rgba(${rgb},${live.active ? '0.75' : '0.18'}), transparent)`,
           transition: 'all 400ms ease',
         }} />
 
@@ -156,7 +165,7 @@ function WorkflowCard({ step, index }: { step: typeof steps[0]; index: number })
             lineHeight: 1,
             /* outline text — safe cross-browser */
             color: 'transparent',
-            WebkitTextStroke: `1px rgba(${step.accent === '#A0DC64' ? '160,220,100' : '201,169,110'},${live.active ? 0.18 : 0.07})`,
+            WebkitTextStroke: `1px rgba(${rgb},${live.active ? 0.2 : 0.08})`,
             userSelect: 'none',
             pointerEvents: 'none',
             transition: 'all 500ms ease',
@@ -175,7 +184,7 @@ function WorkflowCard({ step, index }: { step: typeof steps[0]; index: number })
           boxSizing: 'border-box',
         }}>
 
-          {/* Step number — top, plain color text (no gradient-clip) */}
+          {/* Step number — top, solid accent color + glow on hover */}
           <span
             aria-label={`Step ${step.number}`}
             style={{
@@ -184,11 +193,12 @@ function WorkflowCard({ step, index }: { step: typeof steps[0]; index: number })
               fontWeight: 900,
               letterSpacing: '-0.07em',
               lineHeight: 1,
-              /* solid color — avoids the webkit-background-clip fill block bug */
-              color: live.active ? '#fff' : step.accent,
-              opacity: live.active ? 1 : 0.7,
-              textShadow: live.active ? `0 0 28px ${step.accent}90` : 'none',
-              transition: 'color 350ms ease, opacity 350ms ease, text-shadow 350ms ease',
+              color: live.active ? '#ffffff' : step.accent,
+              opacity: live.active ? 1 : 0.75,
+              textShadow: live.active
+                ? `0 0 20px rgba(${rgb},0.9), 0 0 40px rgba(${rgb},0.5), 0 0 80px rgba(${rgb},0.25)`
+                : 'none',
+              transition: 'color 300ms ease, opacity 300ms ease, text-shadow 400ms ease',
               userSelect: 'none',
             }}
           >
@@ -201,7 +211,7 @@ function WorkflowCard({ step, index }: { step: typeof steps[0]; index: number })
             <div style={{
               fontSize: '8px', fontWeight: 800, letterSpacing: '0.3em',
               textTransform: 'uppercase',
-              color: live.active ? step.accent : `${step.accent}55`,
+              color: live.active ? step.accent : `rgba(${rgb},0.45)`,
               marginBottom: '0.5rem',
               transition: 'color 300ms ease',
             }}>
@@ -225,7 +235,7 @@ function WorkflowCard({ step, index }: { step: typeof steps[0]; index: number })
             <div style={{
               height: 1,
               width: live.active ? '50%' : '20%',
-              background: `linear-gradient(90deg, ${step.accent}77, transparent)`,
+              background: `linear-gradient(90deg, rgba(${rgb},0.7), transparent)`,
               marginBottom: '0.75rem',
               transition: 'width 550ms cubic-bezier(0.16,1,0.3,1)',
             }} />
@@ -255,34 +265,52 @@ export default function HowItWorksSection() {
   const gsapCtx    = useRef<any>(null);
 
   useEffect(() => {
+    let mounted = true;
+
     (async () => {
       const { gsap }          = await import('gsap');
       const { ScrollTrigger } = await import('gsap/ScrollTrigger');
+      if (!mounted || !gridRef.current) return;
+
       gsap.registerPlugin(ScrollTrigger);
 
       gsapCtx.current = gsap.context(() => {
         const cards = gridRef.current?.querySelectorAll('[data-hiw-card]');
-        if (cards) {
-          gsap.fromTo(
-            cards,
-            { opacity: 0, y: 50, scale: 0.94 },
-            {
-              opacity: 1, y: 0, scale: 1,
-              duration: 0.9, ease: 'power3.out',
-              stagger: { each: 0.12, from: 'start' },
-              scrollTrigger: { trigger: gridRef.current, start: 'top 82%', once: true },
-            }
-          );
-        }
+        if (!cards || cards.length === 0) return;
+
+        // Ensure cards are fully visible before the ScrollTrigger fires
+        // so there's no flash of invisible content on mount.
+        gsap.set(cards, { opacity: 1, y: 0, scale: 1 });
+
+        gsap.fromTo(
+          cards,
+          { opacity: 0, y: 40, scale: 0.95 },
+          {
+            opacity: 1, y: 0, scale: 1,
+            duration: 0.85, ease: 'power3.out',
+            stagger: { each: 0.1, from: 'start' },
+            scrollTrigger: {
+              trigger: gridRef.current,
+              start: 'top 85%',
+              once: true,
+              invalidateOnRefresh: true,
+            },
+          }
+        );
       }, sectionRef);
     })();
-    return () => { gsapCtx.current?.revert(); };
+
+    return () => {
+      mounted = false;
+      gsapCtx.current?.revert();
+    };
   }, []);
 
   return (
     <section
       id="how-it-works"
       ref={sectionRef}
+      data-gsap-section="sticky"
       style={{
         background: '#04040A',
         position: 'relative',
@@ -292,6 +320,13 @@ export default function HowItWorksSection() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        // Prevent flicker caused by VideoShowcase's position:fixed pin-spacer
+        // injecting into the DOM and triggering a repaint in Chrome/Brave.
+        // isolation:isolate creates an explicit stacking context; translateZ(0)
+        // promotes this section to its own GPU compositing layer so adjacent
+        // pin transitions don't bleed in.
+        isolation: 'isolate',
+        transform: 'translateZ(0)',
       }}
     >
       {/* Ambient glows */}

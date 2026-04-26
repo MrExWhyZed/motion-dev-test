@@ -33,8 +33,6 @@ export default function SmoothScroll() {
       gsap.registerPlugin(ScrollTrigger);
 
       const lenis = new Lenis({
-        // lerp 0.1 = buttery smooth without lag.
-        // Lower = more trailing/sticky. Higher = snappier/closer to native.
         lerp: 0.1,
         smoothWheel: true,
         syncTouch: false,

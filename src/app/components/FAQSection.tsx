@@ -130,9 +130,128 @@ function FAQItem({ faq, index, isOpen, onToggle }: {
 
 export default function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth < 768);
+    update();
+    window.addEventListener('resize', update, { passive: true });
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   const col1 = faqs.slice(0, 6);
   const col2 = faqs.slice(6);
+
+  if (isMobile) {
+    return (
+      <section
+        data-gsap-section="default"
+        style={{
+          background: 'linear-gradient(180deg, #020208 0%, #04040c 50%, #030309 100%)',
+          position: 'relative',
+          overflow: 'hidden',
+          padding: '64px 0 80px',
+          isolation: 'isolate',
+          zIndex: 1,
+        }}
+      >
+        {/* Ambient glow */}
+        <div style={{
+          position: 'absolute', top: '15%', left: '50%', transform: 'translateX(-50%)',
+          width: '120vw', height: '50vh',
+          background: 'radial-gradient(ellipse, rgba(201,169,110,0.04) 0%, transparent 65%)',
+          filter: 'blur(60px)', pointerEvents: 'none',
+        }} />
+
+        {/* Bottom glow */}
+        <div style={{
+          position: 'absolute', bottom: '10%', left: '50%', transform: 'translateX(-50%)',
+          width: '80vw', height: '30vh',
+          background: 'radial-gradient(ellipse, rgba(74,158,255,0.03) 0%, transparent 65%)',
+          filter: 'blur(60px)', pointerEvents: 'none',
+        }} />
+
+        <div style={{ position: 'relative', zIndex: 1, padding: '0 16px' }}>
+
+          {/* Header */}
+          <div style={{ marginBottom: '36px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, transparent, rgba(201,169,110,0.3))' }} />
+              <span style={{ fontSize: '7.5px', letterSpacing: '0.32em', textTransform: 'uppercase', color: 'rgba(201,169,110,0.65)', fontWeight: 800, whiteSpace: 'nowrap' }}>Questions</span>
+              <div style={{ flex: 1, height: '1px', background: 'linear-gradient(270deg, transparent, rgba(201,169,110,0.3))' }} />
+            </div>
+
+            <h2 style={{
+              fontSize: 'clamp(2.2rem, 10vw, 3rem)', fontWeight: 900,
+              letterSpacing: '-0.055em', color: '#F7F1E2', margin: '0 0 12px',
+              lineHeight: 0.95,
+            }}>
+              FAQs
+              <span style={{ color: '#C9A96E', textShadow: '0 0 24px rgba(201,169,110,0.7)' }}>.</span>
+            </h2>
+            <p style={{
+              fontSize: '13px', color: 'rgba(237,233,227,0.38)',
+              lineHeight: 1.65, letterSpacing: '-0.01em', margin: 0, maxWidth: '32ch',
+            }}>
+              Everything you need to know, from brief to delivery.
+            </p>
+          </div>
+
+          {/* All FAQs in a single column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', marginBottom: '32px' }}>
+            {faqs.map((faq, i) => (
+              <FAQItem
+                key={i}
+                faq={faq}
+                index={i}
+                isOpen={openIndex === i}
+                onToggle={() => setOpenIndex(openIndex === i ? null : i)}
+              />
+            ))}
+          </div>
+
+          {/* Bottom CTA */}
+          <div style={{
+            padding: '20px',
+            background: 'rgba(255,255,255,0.018)',
+            border: '1px solid rgba(255,255,255,0.065)',
+            borderRadius: '18px',
+            position: 'relative',
+            overflow: 'hidden',
+          }}>
+            {/* Subtle gold line */}
+            <div style={{ position: 'absolute', top: 0, left: '15%', right: '15%', height: '1px', background: 'linear-gradient(90deg, transparent, rgba(201,169,110,0.3), transparent)' }} />
+
+            <p style={{ fontSize: '14px', fontWeight: 700, color: '#F7F1E2', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
+              Still have questions?
+            </p>
+            <p style={{ fontSize: '12px', color: 'rgba(237,233,227,0.38)', margin: '0 0 16px', lineHeight: 1.5 }}>
+              Our team responds within one business day.
+            </p>
+            <a
+              href="mailto:hello@motiongrace.com"
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                width: '100%', padding: '13px 22px', borderRadius: '100px',
+                background: 'rgba(201,169,110,0.1)',
+                border: '1px solid rgba(201,169,110,0.28)',
+                color: '#C9A96E', fontSize: '11px', fontWeight: 700,
+                letterSpacing: '0.1em', textTransform: 'uppercase',
+                textDecoration: 'none',
+                boxSizing: 'border-box',
+              }}
+            >
+              Get in touch
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+              </svg>
+            </a>
+          </div>
+
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section
@@ -146,6 +265,8 @@ export default function FAQSection() {
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
+        isolation: 'isolate',
+        zIndex: 1,
       }}
     >
       {/* Subtle ambient glow */}
@@ -254,3 +375,4 @@ export default function FAQSection() {
     </section>
   );
 }
+

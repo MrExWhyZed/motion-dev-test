@@ -7,9 +7,11 @@ import { useRouter } from 'next/navigation';
 
 const navLinks = [
   { label: 'Services', href: '#services' },
-  { label: 'Works', href: '#showreel' },
+  { label: 'Works', href: 'https://app.motiongraceco.com/gallery', external: true },
   { label: 'Process', href: '#how-it-works' },
 ];
+
+const AI_STRATEGIST_HREF = 'https://app.motiongraceco.com/strategist';
 
 interface ContactFormData {
   name: string;
@@ -40,6 +42,9 @@ const budgetOptions = [
 export default function Header() {
   const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [pillVisible, setPillVisible] = useState(false);
+  const [pillMounted, setPillMounted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [formData, setFormData] = useState<ContactFormData>({
@@ -49,21 +54,50 @@ export default function Header() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 60);
+    const handleScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > 60);
+      setCollapsed(y > window.innerHeight * 0.75);
+    };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Decouple mount from visibility so CSS transition always fires
+  useEffect(() => {
+    if (collapsed) {
+      setPillMounted(true);
+      // Let browser paint the hidden state first, then transition in
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setPillVisible(true));
+      });
+    } else {
+      // Fade out first, then unmount after transition completes
+      setPillVisible(false);
+      const t = setTimeout(() => setPillMounted(false), 650);
+      return () => clearTimeout(t);
+    }
+  }, [collapsed]);
 
   useEffect(() => {
     document.body.style.overflow = (menuOpen || contactOpen) ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [menuOpen, contactOpen]);
 
-  const handleLinkClick = (href: string) => {
+  const handleLinkClick = (href: string, external?: boolean) => {
     setMenuOpen(false);
     setContactOpen(false);
+    if (external) {
+      window.open(href, '_blank', 'noopener noreferrer');
+      return;
+    }
     const el = document.querySelector(href);
     if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const scrollToHero = () => {
+    setMenuOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleContactOpen = () => {
@@ -212,76 +246,217 @@ export default function Header() {
 
         /* ─── Mobile Menu ─── */
         .mobile-menu-overlay {
-          position: fixed; inset: 0; z-index: 40;
-          transition: opacity 0.55s cubic-bezier(0.16,1,0.3,1);
+          position: fixed; inset: 0; z-index: 55;
+          opacity: 0; pointer-events: none;
+          transition: opacity 0.45s cubic-bezier(0.22,1,0.36,1);
         }
-        .mobile-menu-overlay.hidden-modal { opacity: 0; pointer-events: none; }
+        .mobile-menu-overlay.menu-open {
+          opacity: 1; pointer-events: auto;
+        }
 
+        /* Nav items stagger in from below */
         .mobile-nav-item {
-          opacity: 0; transform: translateY(18px);
-          transition: opacity 0.5s cubic-bezier(0.16,1,0.3,1), transform 0.5s cubic-bezier(0.16,1,0.3,1);
+          opacity: 0;
+          transform: translateY(22px);
+          transition:
+            opacity 0.5s cubic-bezier(0.22,1,0.36,1),
+            transform 0.5s cubic-bezier(0.22,1,0.36,1);
         }
-        .mobile-menu-overlay:not(.hidden-modal) .mobile-nav-item { opacity: 1; transform: translateY(0); }
+        .mobile-menu-overlay.menu-open .mobile-nav-item {
+          opacity: 1;
+          transform: translateY(0);
+        }
 
+        /* Large nav text */
         .mobile-nav-btn {
-          font-size: clamp(1.8rem, 8vw, 2.6rem); font-weight: 700;
-          letter-spacing: -0.04em; color: rgba(237,233,227,0.45);
+          font-size: clamp(2rem, 9vw, 2.8rem); font-weight: 700;
+          letter-spacing: -0.04em; color: rgba(237,233,227,0.4);
           background: none; border: none; cursor: pointer; padding: 0; line-height: 1.1;
           font-family: inherit;
-          transition: color 0.35s ease, letter-spacing 0.35s ease;
+          transition: color 0.3s ease, letter-spacing 0.3s ease;
           display: block; width: 100%; text-align: center;
         }
-        .mobile-nav-btn:hover { color: #EDE9E3; letter-spacing: -0.02em; }
+        .mobile-nav-btn:hover, .mobile-nav-btn:active { color: rgba(237,233,227,0.9); letter-spacing: -0.02em; }
 
-        .mobile-contact-btn {
+        /* Glass pill button (Contact Us) */
+        .mobile-glass-pill {
           display: inline-flex; align-items: center; gap: 8px;
-          padding: 0.8rem 1.8rem; border-radius: 100px;
-          background: rgba(201,169,110,0.07); border: 1px solid rgba(201,169,110,0.22);
-          color: #C9A96E; font-size: 9px; font-weight: 600;
+          padding: 0.75rem 1.6rem; border-radius: 100px;
+          background: rgba(237,233,227,0.04);
+          border: 1px solid rgba(237,233,227,0.1);
+          color: rgba(237,233,227,0.65); font-size: 9px; font-weight: 600;
           letter-spacing: 0.2em; text-transform: uppercase;
-          cursor: pointer; transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
-          font-family: inherit;
+          backdrop-filter: blur(20px) saturate(1.4);
+          -webkit-backdrop-filter: blur(20px) saturate(1.4);
+          cursor: pointer; font-family: inherit; text-decoration: none;
+          transition: all 0.35s cubic-bezier(0.22,1,0.36,1);
         }
-        .mobile-contact-btn:hover {
-          background: rgba(201,169,110,0.14); border-color: rgba(201,169,110,0.45);
-          box-shadow: 0 0 28px rgba(201,169,110,0.14);
+        .mobile-glass-pill:hover, .mobile-glass-pill:active {
+          background: rgba(237,233,227,0.09);
+          border-color: rgba(237,233,227,0.18);
+          color: rgba(237,233,227,0.95);
+        }
+
+        /* Mobile AI Strategist pill */
+        .mobile-ai-pill {
+          display: inline-flex; align-items: center;
+          padding: 0.75rem 1.6rem; border-radius: 100px;
+          background: rgba(201,89,221,0.05);
+          border: 1px solid rgba(201,89,221,0.22);
+          font-size: 9px; font-weight: 700;
+          letter-spacing: 0.2em; text-transform: uppercase;
+          backdrop-filter: blur(20px) saturate(1.4);
+          -webkit-backdrop-filter: blur(20px) saturate(1.4);
+          cursor: pointer; font-family: inherit; text-decoration: none;
+          transition: all 0.35s cubic-bezier(0.22,1,0.36,1);
+        }
+        .mobile-ai-pill:hover, .mobile-ai-pill:active {
+          background: rgba(201,89,221,0.1);
+          border-color: rgba(201,89,221,0.4);
+          box-shadow: 0 0 18px rgba(201,89,221,0.25), 0 0 36px rgba(8,148,255,0.12);
         }
 
         .mobile-footer-info {
           position: absolute; bottom: 2.25rem; left: 50%; transform: translateX(-50%);
-          opacity: 0; transition: opacity 0.5s 0.45s; text-align: center; white-space: nowrap;
+          opacity: 0; transition: opacity 0.5s 0.4s; text-align: center; white-space: nowrap;
         }
-        .mobile-menu-overlay:not(.hidden-modal) .mobile-footer-info { opacity: 1; }
+        .mobile-menu-overlay.menu-open .mobile-footer-info { opacity: 1; }
 
         /* ─── Contact nav button ─── */
         .contact-nav-btn {
           display: flex; align-items: center; gap: 6px;
           padding: 0.45rem 1.1rem 0.45rem 0.85rem; border-radius: 100px;
-          background: rgba(201,169,110,0.07); border: 1px solid rgba(201,169,110,0.2);
-          color: #C9A96E; font-size: 10px; font-weight: 600;
+          background: rgba(237,233,227,0.04); border: 1px solid rgba(237,233,227,0.08);
+          color: rgba(237,233,227,0.65); font-size: 10px; font-weight: 600;
           letter-spacing: 0.14em; text-transform: uppercase;
           cursor: pointer; transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+          backdrop-filter: blur(16px) saturate(1.2);
+          -webkit-backdrop-filter: blur(16px) saturate(1.2);
           font-family: inherit; margin-left: 0.35rem;
         }
         .contact-nav-btn:hover {
-          background: rgba(201,169,110,0.14); border-color: rgba(201,169,110,0.42);
-          box-shadow: 0 0 22px rgba(201,169,110,0.14); transform: translateY(-1px);
+          background: rgba(237,233,227,0.08); border-color: rgba(237,233,227,0.14);
+          color: rgba(237,233,227,0.9);
+          transform: translateY(-1px);
         }
         .pulse-dot {
-          width: 5px; height: 5px; border-radius: 50%; background: #C9A96E;
+          width: 5px; height: 5px; border-radius: 50%; background: rgba(237,233,227,0.5);
           animation: dot-pulse 2.5s ease-in-out infinite;
         }
         @keyframes dot-pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.3; transform: scale(0.65); }
         }
+
+        /* ─── AI Strategist Nav Item ─── */
+        .ai-strategist-nav-item {
+          position: relative;
+        }
+        .ai-strategist-nav-text {
+          background: linear-gradient(to right, #0894ff 0%, #c959dd 45%, #ff9004 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          filter: drop-shadow(0 0 6px rgba(201,89,221,0.5));
+          animation: ai-text-glow 4s ease-in-out infinite;
+        }
+        @keyframes ai-text-glow {
+          0%, 100% { filter: drop-shadow(0 0 4px rgba(201,89,221,0.45)) drop-shadow(0 0 8px rgba(8,148,255,0.2)); }
+          50% { filter: drop-shadow(0 0 8px rgba(255,144,4,0.5)) drop-shadow(0 0 14px rgba(201,89,221,0.35)); }
+        }
+        .ai-strategist-nav-item:hover .ai-strategist-nav-text {
+          filter: drop-shadow(0 0 10px rgba(201,89,221,0.7)) drop-shadow(0 0 20px rgba(8,148,255,0.4));
+          animation: none;
+        }
+        .ai-strategist-nav-item:hover {
+          background: rgba(201,89,221,0.06) !important;
+        }
+
+        /* ─── Collapsed Header ─── */
+        .header-collapsed-pill {
+          position: fixed;
+          top: 1.1rem;
+          left: 50%;
+          transform: translateX(-50%) translateY(-22px);
+          z-index: 50;
+          opacity: 0;
+          transition:
+            opacity 0.65s cubic-bezier(0.22,1,0.36,1),
+            transform 0.65s cubic-bezier(0.22,1,0.36,1);
+          pointer-events: none;
+        }
+        .header-collapsed-pill.pill-visible {
+          opacity: 1;
+          transform: translateX(-50%) translateY(0);
+          pointer-events: auto;
+        }
+        .collapsed-nav {
+          display: flex; align-items: center; gap: 0.25rem;
+          padding: 0.35rem 0.5rem;
+          border-radius: 100px;
+          background: rgba(4,4,10,0.75);
+          backdrop-filter: blur(24px) saturate(1.6);
+          -webkit-backdrop-filter: blur(24px) saturate(1.6);
+          border: 1px solid rgba(237,233,227,0.08);
+          box-shadow: 0 4px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(237,233,227,0.03) inset;
+        }
+        .collapsed-nav-item {
+          padding: 0.4rem 1.1rem;
+          border-radius: 100px;
+          font-size: 10px; font-weight: 600;
+          letter-spacing: 0.14em; text-transform: uppercase;
+          color: rgba(237,233,227,0.55);
+          background: none; border: none; cursor: pointer;
+          font-family: inherit; text-decoration: none;
+          transition: color 0.3s, background 0.3s;
+          display: inline-flex; align-items: center;
+        }
+        .collapsed-nav-item:hover {
+          color: rgba(237,233,227,0.9);
+          background: rgba(237,233,227,0.05);
+        }
+        .collapsed-divider {
+          width: 1px; height: 14px;
+          background: rgba(237,233,227,0.1);
+          flex-shrink: 0;
+        }
+
+        /* Full header fade */
+        .header-full {
+          transition: opacity 0.55s cubic-bezier(0.22,1,0.36,1), transform 0.55s cubic-bezier(0.22,1,0.36,1);
+        }
+        .header-full.header-faded {
+          opacity: 0;
+          pointer-events: none;
+          transform: translateY(-10px);
+        }
       `}</style>
+
+      {/* ─── Collapsed Pill (appears after hero) ────────────────── */}
+      {pillMounted && (
+        <div className={`header-collapsed-pill ${pillVisible ? 'pill-visible' : ''}`}>
+          <div className="collapsed-nav">
+            <button className="collapsed-nav-item" onClick={scrollToHero}>
+              Home
+            </button>
+            <div className="collapsed-divider" />
+            <a
+              href={AI_STRATEGIST_HREF}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="collapsed-nav-item"
+            >
+              <span className="ai-strategist-nav-text">AI Strategist</span>
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* ─── Header ─────────────────────────────────────────────── */}
       <header
-        className={`absolute top-0 left-0 right-0 z-50 transition-all duration-1000 ${
+        className={`header-full absolute top-0 left-0 right-0 z-50 transition-all duration-1000 ${
           scrolled ? 'py-3.5' : 'bg-transparent py-6'
-        }`}
+        } ${collapsed ? 'header-faded' : ''}`}
       >
         <div className="max-w-7xl mx-auto px-6 sm:px-10 flex items-center justify-between">
           {/* Logo */}
@@ -290,8 +465,8 @@ export default function Header() {
               <Image src="/motion_grace_logo.png" alt="Motion Grace" fill className="logo-img object-contain" priority />
             </div>
             <span className="font-bold text-sm tracking-tight hidden sm:block">
-              <span className="text-foreground">Motion</span>
-              <span className="text-gradient-gold">Grace</span>
+              <span style={{ color: '#ffffff' }}>Motion</span>
+              <span style={{ color: '#ffffff' }}>Grace</span>
             </span>
           </Link>
 
@@ -301,7 +476,7 @@ export default function Header() {
               {navLinks.map((link) => (
                 <button
                   key={link.label}
-                  onClick={() => handleLinkClick(link.href)}
+                  onClick={() => handleLinkClick(link.href, link.external)}
                   className="px-4 py-1.5 text-[10px] font-medium tracking-[0.15em] uppercase text-muted-foreground hover:text-foreground transition-all duration-500 rounded-full hover:bg-white/4"
                 >
                   {link.label}
@@ -313,65 +488,117 @@ export default function Header() {
               >
                 Pricing
               </Link>
+              {/* AI Strategist — inside nav pill */}
+              <a
+                href={AI_STRATEGIST_HREF}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ai-strategist-nav-item px-4 py-1.5 text-[10px] font-semibold tracking-[0.15em] uppercase rounded-full transition-all duration-500"
+              >
+                <span className="ai-strategist-nav-text">AI Strategist</span>
+              </a>
             </div>
           </nav>
 
           {/* Right side */}
           <div className="flex items-center gap-2">
-            {/* Add Project — desktop */}
-            <Link href="/add-project" className="hidden md:flex items-center gap-2 px-5 py-2.5 rounded-full text-[10px] font-semibold uppercase text-primary-foreground bg-primary hover:opacity-90 transition-all duration-700 animate-pulse-gold" aria-label="Add a new project">
-              Add Project
-            </Link>
-
-            {/* Book a Call — desktop 
-            <button
-              onClick={() => handleLinkClick('#cta')}
-              className="hidden md:flex items-center gap-2 px-5 py-2.5 rounded-full text-[10px] font-semibold tracking-[0.15em] uppercase text-primary-foreground bg-primary hover:opacity-90 transition-all duration-700 animate-pulse-gold"
+            {/* Contact Us — desktop */}
+            <a
+              href="mailto:hello@motiongrace.com"
+              className="hidden md:flex items-center gap-2 px-5 py-2.5 rounded-full text-[10px] font-semibold uppercase tracking-[0.15em] transition-all duration-300"
+              style={{
+                background: 'rgba(237, 233, 227, 0.04)',
+                backdropFilter: 'blur(16px) saturate(1.2)',
+                WebkitBackdropFilter: 'blur(16px) saturate(1.2)',
+                border: '1px solid rgba(237, 233, 227, 0.08)',
+                color: 'rgba(237,233,227,0.65)',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(237,233,227,0.08)'; (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(237,233,227,0.9)'; (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(237,233,227,0.14)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(237,233,227,0.04)'; (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(237,233,227,0.65)'; (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(237,233,227,0.08)'; }}
+              aria-label="Contact us"
             >
-              Book a Call
-            </button>*/}
+              Contact Us
+            </a>
 
             {/* Hamburger */}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="md:hidden flex flex-col gap-[5px] p-2.5 rounded-xl hover:bg-white/5 transition-colors duration-300 ml-1"
+              className="md:hidden flex flex-col justify-center items-center gap-[5px] w-10 h-10 rounded-xl transition-all duration-300"
+              style={{ background: menuOpen ? 'rgba(237,233,227,0.06)' : 'transparent' }}
               aria-label="Toggle menu"
             >
-              <span className={`block h-[1.5px] w-5 bg-foreground/80 transition-all duration-500 origin-center ${menuOpen ? 'rotate-45 translate-y-[6.5px]' : ''}`} />
-              <span className={`block h-[1.5px] bg-foreground/80 transition-all duration-500 ${menuOpen ? 'opacity-0 scale-x-0 w-3' : 'w-3 ml-auto'}`} />
-              <span className={`block h-[1.5px] w-5 bg-foreground/80 transition-all duration-500 origin-center ${menuOpen ? '-rotate-45 -translate-y-[6.5px]' : ''}`} />
+              <span className={`block h-[1.5px] w-5 transition-all duration-500 origin-center ${menuOpen ? 'rotate-45 translate-y-[6.5px]' : ''}`}
+                style={{ background: 'rgba(237,233,227,0.9)', boxShadow: '0 0 6px rgba(237,233,227,0.5)' }} />
+              <span className={`block h-[1.5px] transition-all duration-500 ${menuOpen ? 'opacity-0 scale-x-0 w-3' : 'w-3 ml-auto'}`}
+                style={{ background: 'rgba(237,233,227,0.9)', boxShadow: '0 0 6px rgba(237,233,227,0.5)' }} />
+              <span className={`block h-[1.5px] w-5 transition-all duration-500 origin-center ${menuOpen ? '-rotate-45 -translate-y-[6.5px]' : ''}`}
+                style={{ background: 'rgba(237,233,227,0.9)', boxShadow: '0 0 6px rgba(237,233,227,0.5)' }} />
             </button>
           </div>
         </div>
       </header>
 
       {/* ─── Mobile Menu ─────────────────────────────────────────── */}
-      <div className={`mobile-menu-overlay ${menuOpen ? '' : 'hidden-modal'}`}>
+      <div className={`mobile-menu-overlay ${menuOpen ? 'menu-open' : ''}`}>
+        {/* Backdrop */}
         <div
           className="absolute inset-0"
-          style={{ background: 'rgba(4,4,10,0.97)', backdropFilter: 'blur(32px) saturate(1.4)', WebkitBackdropFilter: 'blur(32px) saturate(1.4)' }}
+          style={{ background: 'rgba(4,4,10,0.96)', backdropFilter: 'blur(32px) saturate(1.4)', WebkitBackdropFilter: 'blur(32px) saturate(1.4)' }}
           onClick={() => setMenuOpen(false)}
         />
-        {/* Glow orb */}
+        {/* Ambient glow */}
         <div className="absolute pointer-events-none" style={{
-          top: '30%', left: '50%', transform: 'translate(-50%,-50%)',
-          width: '80vw', height: '80vw', maxWidth: 400, maxHeight: 400,
+          top: '35%', left: '50%', transform: 'translate(-50%,-50%)',
+          width: '70vw', height: '70vw', maxWidth: 360, maxHeight: 360,
           borderRadius: '50%',
-          background: 'radial-gradient(ellipse at center, rgba(201,169,110,0.07) 0%, transparent 65%)',
+          background: 'radial-gradient(ellipse at center, rgba(201,89,221,0.05) 0%, rgba(8,148,255,0.04) 40%, transparent 70%)',
         }} />
 
+        {/* Close button */}
+        <button
+          onClick={() => setMenuOpen(false)}
+          aria-label="Close menu"
+          className="mobile-nav-item"
+          style={{
+            position: 'absolute', top: '1.25rem', right: '1.25rem',
+            width: 40, height: 40, borderRadius: '50%',
+            background: 'rgba(237,233,227,0.05)',
+            border: '1px solid rgba(237,233,227,0.1)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', color: 'rgba(237,233,227,0.5)',
+            fontSize: 16, lineHeight: 1,
+            transition: 'all 0.3s cubic-bezier(0.22,1,0.36,1)',
+            transitionDelay: '0ms',
+            zIndex: 10,
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = 'rgba(237,233,227,0.1)';
+            (e.currentTarget as HTMLButtonElement).style.color = 'rgba(237,233,227,0.95)';
+            (e.currentTarget as HTMLButtonElement).style.transform = 'rotate(90deg)';
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = 'rgba(237,233,227,0.05)';
+            (e.currentTarget as HTMLButtonElement).style.color = 'rgba(237,233,227,0.5)';
+            (e.currentTarget as HTMLButtonElement).style.transform = 'rotate(0deg)';
+          }}
+        >
+          ✕
+        </button>
+
         <nav className="relative flex flex-col items-center justify-center h-full px-6" style={{ gap: 0 }}>
-          {/* Section label */}
+
+          {/* Label */}
           <p className="mobile-nav-item" style={{
-            fontSize: 9, letterSpacing: '0.25em', textTransform: 'uppercase',
-            color: 'rgba(201,169,110,0.38)', marginBottom: '2rem', transitionDelay: '0ms'
+            fontSize: 8, letterSpacing: '0.28em', textTransform: 'uppercase',
+            color: 'rgba(201,169,110,0.35)', marginBottom: '2.2rem', transitionDelay: '0ms',
           }}>
             Navigation
           </p>
 
+          {/* Nav links */}
           {navLinks.map((link, i) => (
-            <div key={link.label} className="mobile-nav-item" style={{ paddingTop: '0.4rem', paddingBottom: '0.4rem', transitionDelay: `${55 + i * 55}ms` }}>
-              <button className="mobile-nav-btn" onClick={() => handleLinkClick(link.href)}>
+            <div key={link.label} className="mobile-nav-item" style={{ paddingTop: '0.5rem', paddingBottom: '0.5rem', transitionDelay: `${60 + i * 60}ms` }}>
+              <button className="mobile-nav-btn" onClick={() => handleLinkClick(link.href, link.external)}>
                 {link.label}
               </button>
             </div>
@@ -379,33 +606,38 @@ export default function Header() {
 
           {/* Divider */}
           <div className="mobile-nav-item" style={{
-            height: 1, width: 44, margin: '1.4rem 0',
-            background: 'linear-gradient(90deg, transparent, rgba(201,169,110,0.35), transparent)',
-            transitionDelay: `${55 + navLinks.length * 55}ms`
+            height: 1, width: 36, margin: '1.6rem 0',
+            background: 'linear-gradient(90deg, transparent, rgba(237,233,227,0.12), transparent)',
+            transitionDelay: `${60 + navLinks.length * 60}ms`,
           }} />
 
-          {/* Buttons */}
-          <div className="mobile-nav-item flex flex-col items-center gap-3" style={{ transitionDelay: `${80 + navLinks.length * 55}ms` }}>
-            <Link href="/pricing" className="mobile-contact-btn" onClick={() => setMenuOpen(false)}>
-              <span className="pulse-dot" />
-              Pricing
-            </Link>
-            <Link href="/add-project" className="mobile-contact-btn" onClick={() => setMenuOpen(false)}>
-              <span className="pulse-dot" />
-              Add Project
-            </Link>
-            <button
-              onClick={() => handleLinkClick('#cta')}
-              className="px-9 py-3.5 rounded-full text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-foreground bg-primary hover:opacity-90 transition-all duration-700 animate-pulse-gold"
+          {/* Pill buttons — Contact Us + AI Strategist only */}
+          <div className="mobile-nav-item flex flex-col items-center gap-3" style={{ transitionDelay: `${80 + navLinks.length * 60}ms` }}>
+            {/* Contact Us — glass pill */}
+            <a
+              href="mailto:hello@motiongrace.com"
+              className="mobile-glass-pill"
+              onClick={() => setMenuOpen(false)}
             >
-              Book a Call
-            </button>
+              Contact Us
+            </a>
+            {/* AI Strategist */}
+            <a
+              href={AI_STRATEGIST_HREF}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mobile-ai-pill"
+              onClick={() => setMenuOpen(false)}
+            >
+              <span className="ai-strategist-nav-text">AI Strategist</span>
+            </a>
           </div>
+
         </nav>
 
         {/* Footer tag */}
         <div className="mobile-footer-info">
-          <p style={{ fontSize: 8, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(237,233,227,0.14)' }}>
+          <p style={{ fontSize: 8, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(237,233,227,0.12)' }}>
             Motion Grace · Premium Motion Studio
           </p>
         </div>

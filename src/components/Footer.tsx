@@ -22,11 +22,11 @@ export default function Footer() {
                 />
               </div>
               <span className="font-bold text-sm tracking-tight">
-                <span className="text-foreground">Motion</span>
-                <span className="text-gradient-gold">Grace</span>
+                <span style={{ color: '#ffffff' }}>Motion</span>
+                <span style={{ color: '#ffffff' }}>Grace</span>
               </span>
             </Link>
-            <p className="text-xs text-muted-foreground font-light max-w-[200px] leading-relaxed tracking-wide">
+            <p className="text-xs font-light max-w-[200px] leading-relaxed tracking-wide" style={{ color: 'rgba(255,255,255,0.7)' }}>
               Cinematic CGI for modern beauty brands.
             </p>
           </div>
@@ -37,7 +37,7 @@ export default function Footer() {
               <Link
                 key={item}
                 href="#"
-                className="text-xs font-light text-muted-foreground hover:text-foreground/80 transition-colors duration-500 tracking-wide"
+                className="text-xs font-light hover:text-white transition-colors duration-500 tracking-wide" style={{ color: 'rgba(255,255,255,0.65)' }}
               >
                 {item}
               </Link>
@@ -47,7 +47,7 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-14 pt-6 border-t border-border/20 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-[10px] text-muted-foreground/60 tracking-wide">
+          <p className="text-[10px] tracking-wide" style={{ color: 'rgba(255,255,255,0.4)' }}>
             © 2026 MotionGrace. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
@@ -55,7 +55,7 @@ export default function Footer() {
               <Link
                 key={social}
                 href="#"
-                className="text-[10px] font-medium text-muted-foreground/60 hover:text-primary/80 transition-colors duration-500 tracking-wide"
+                className="text-[10px] font-medium hover:text-white transition-colors duration-500 tracking-wide" style={{ color: 'rgba(255,255,255,0.4)' }}
               >
                 {social}
               </Link>

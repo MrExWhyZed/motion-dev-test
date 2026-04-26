@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <!--
+    MASK OVERLAY for VideoShowcase
+    ════════════════════════════════
+    Black rectangle covering the entire frame, with the MG logo cut out as
+    transparent holes using fill-rule="evenodd".
+
+    At start: scaled 80× → floods viewport → video completely hidden
+    On scroll: GSAP scales down to 1.1× → logo holes reveal video underneath
+    
+    The logo is centred at (960, 540) — the middle of the 1920×1080 frame.
+    Logo dimensions: ~700 wide × ~360 tall (centred)
+  -->
+  <g fill="black" fill-rule="evenodd">
+    <!-- Full black background -->
+    <rect x="0" y="0" width="1920" height="1080"/>
+
+    <!--
+      MG LOGO CUTOUT — angular geometric letterforms matching the MotionGrace mark.
+      
+      The logo consists of two main shapes:
+        • Left diagonal element  (M-form) — angled parallelogram cluster
+        • Right angular bracket  (G-form) — angular bracket shape
+
+      All coordinates are in the 1920×1080 coordinate system, centred at (960,540).
+      Logo bounding box: x=610..1310, y=360..720 (700×360px centred)
+    -->
+
+    <!-- ── M element: left cluster of angular strokes ── -->
+    <!-- Left outer diagonal stroke -->
+    <polygon points="
+      610,720
+      680,720
+      820,360
+      750,360
+    "/>
+    <!-- Centre-left diagonal stroke -->
+    <polygon points="
+      700,720
+      770,720
+      870,480
+      800,480
+    "/>
+    <!-- Centre apex / bridge -->
+    <polygon points="
+      790,480
+      860,480
+      900,360
+      830,360
+    "/>
+    <!-- Centre-right diagonal stroke -->
+    <polygon points="
+      840,480
+      910,480
+      980,720
+      910,720
+    "/>
+    <!-- Right diagonal stroke of M -->
+    <polygon points="
+      900,480
+      970,480
+      1060,720
+      990,720
+    "/>
+
+    <!-- ── G element: right angular bracket ── -->
+    <!-- Top horizontal bar -->
+    <polygon points="
+      1000,360
+      1310,360
+      1310,430
+      1000,430
+    "/>
+    <!-- Right vertical bar (top portion) -->
+    <polygon points="
+      1240,430
+      1310,430
+      1310,620
+      1240,620
+    "/>
+    <!-- Mid horizontal bar (crossbar of G) -->
+    <polygon points="
+      1100,565
+      1310,565
+      1310,635
+      1100,635
+    "/>
+    <!-- Bottom horizontal bar -->
+    <polygon points="
+      1000,650
+      1310,650
+      1310,720
+      1000,720
+    "/>
+    <!-- Left vertical bar -->
+    <polygon points="
+      1000,360
+      1070,360
+      1070,720
+      1000,720
+    "/>
+  </g>
+</svg>

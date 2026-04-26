@@ -154,19 +154,58 @@ export default function CTASection() {
           <Link
             href="/add-project"
             data-gsap-button="primary"
-            className="group relative px-10 py-4 rounded-full text-xs font-semibold uppercase tracking-[0.18em] text-primary-foreground bg-primary hover:opacity-95 transition-all duration-700 overflow-hidden">
+            data-cursor="button"
+            data-cursor-label="Start"
+            className="group relative px-10 py-4 rounded-full text-xs font-semibold uppercase tracking-[0.18em] overflow-hidden transition-all duration-300"
+            style={{
+              background: 'rgba(237, 233, 227, 0.06)',
+              backdropFilter: 'blur(16px) saturate(1.2)',
+              WebkitBackdropFilter: 'blur(16px) saturate(1.2)',
+              border: '1px solid rgba(237, 233, 227, 0.2)',
+              color: 'rgba(237,233,227,0.9)',
+            }}
+            onMouseEnter={e => {
+              const el = e.currentTarget as HTMLAnchorElement;
+              el.style.background = 'rgba(237,233,227,0.12)';
+              el.style.borderColor = 'rgba(237,233,227,0.35)';
+              el.style.color = '#ffffff';
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget as HTMLAnchorElement;
+              el.style.background = 'rgba(237,233,227,0.06)';
+              el.style.borderColor = 'rgba(237,233,227,0.2)';
+              el.style.color = 'rgba(237,233,227,0.9)';
+            }}>
             <span className="relative z-10">Add Project</span>
-            <div className="absolute inset-0 overflow-hidden opacity-0 group-hover:opacity-100">
-              <div className="absolute top-0 left-0 w-1/4 h-full bg-gold-shimmer" />
-            </div>
           </Link>
 
           <button
             data-gsap-button="secondary"
+            data-cursor="button"
+            data-cursor-label="Watch"
             onClick={() => {
               document.querySelector('#showreel')?.scrollIntoView({ behavior: 'smooth' });
             }}
-            className="px-10 py-4 rounded-full text-xs font-semibold uppercase tracking-[0.18em] text-foreground/70 border border-foreground/12 hover:border-primary/30 hover:text-foreground hover:bg-white/3 transition-all duration-700">
+            className="px-10 py-4 rounded-full text-xs font-semibold uppercase tracking-[0.18em] transition-all duration-300"
+            style={{
+              background: 'rgba(237, 233, 227, 0.03)',
+              backdropFilter: 'blur(16px) saturate(1.2)',
+              WebkitBackdropFilter: 'blur(16px) saturate(1.2)',
+              border: '1px solid rgba(237, 233, 227, 0.1)',
+              color: 'rgba(237,233,227,0.55)',
+            }}
+            onMouseEnter={e => {
+              const el = e.currentTarget as HTMLButtonElement;
+              el.style.background = 'rgba(237,233,227,0.07)';
+              el.style.borderColor = 'rgba(237,233,227,0.22)';
+              el.style.color = 'rgba(237,233,227,0.9)';
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget as HTMLButtonElement;
+              el.style.background = 'rgba(237,233,227,0.03)';
+              el.style.borderColor = 'rgba(237,233,227,0.1)';
+              el.style.color = 'rgba(237,233,227,0.55)';
+            }}>
             View Our Work
           </button>
         </div>

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { HERO_READY_EVENT, HERO_VIDEO_READY_EVENT } from './Preloader';
+import { HERO_READY_EVENT } from './Preloader';
+import OrbBackground from './OrbBackground';
 
 /* ─── Deterministic particles (SSR-safe) ─────────────────────────────────── */
 const particles = Array.from({ length: 18 }, (_, i) => ({
@@ -862,35 +863,28 @@ export default function HeroSection() {
           filter:    heroVisible ? 'blur(0px)' : 'blur(6px)',
         }}>
 
-        {/* ── Background Video Layer ─────────────────────────────── */}
-        <div ref={bgRef} className="hero-bg-layer" style={{ top: '-15%', height: '130%' }}>
-          <div className="hero-video-wrap">
-            <video
-              autoPlay
-              muted
-              loop
-              playsInline
-              disablePictureInPicture
-              onCanPlay={() => window.dispatchEvent(new CustomEvent(HERO_VIDEO_READY_EVENT))}
-              style={{
-                position: 'absolute', inset: 0,
-                width: '100%', height: '100%',
-                objectFit: 'cover',
-                pointerEvents: 'none',
-              }}
-            >
-              <source src="https://res.cloudinary.com/ddgyx80f6/video/upload/v1777018856/hero-bg_wbazfm.mp4" type="video/mp4" />
-            </video>
+        {/* ── Background Layer — solid black + full-size orb ────── */}
+        <div ref={bgRef} className="hero-bg-layer" style={{ top: '-15%', height: '130%', background: '#000' }}>
+
+          {/* Orb — fills the full layer, exactly like the original w-full h-[700px] */}
+          <div
+            className="absolute pointer-events-none"
+            style={{ zIndex: 5, inset: 0 }}
+          >
+            <OrbBackground
+              hue={0}
+              hoverIntensity={2}
+              rotateOnHover={true}
+              forceHoverState={false}
+              heroEl={heroRef.current}
+            />
           </div>
 
-          <div className="absolute inset-0 bg-gradient-to-b from-[#04040A]/80 via-[#04040A]/30 to-[#04040A]/95 z-10" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#04040A]/70 via-transparent to-[#04040A]/70 z-10" />
           <div
             ref={heroAuraRef}
             className="absolute inset-0 z-10"
             style={{ background: 'radial-gradient(ellipse 60% 35% at 50% 0%, rgba(201,169,110,0.10) 0%, transparent 60%)' }}
           />
-          <div className="absolute inset-0 z-10" style={{ background: 'radial-gradient(ellipse 25% 70% at 0% 50%, rgba(201,169,110,0.06) 0%, transparent 60%), radial-gradient(ellipse 25% 70% at 100% 50%, rgba(74,158,255,0.05) 0%, transparent 60%)' }} />
           <div className="hero-grain z-20" />
           <div ref={veilRef} className="hero-golden-veil z-20" />
         </div>
@@ -922,56 +916,6 @@ export default function HeroSection() {
           />
         </div>
 
-        {/* ── Left Widget ───────────────────────────────────────── */}
-        <div
-          ref={heroLeftWidgetRef}
-          className="hero-widget hero-widget-left"
-          style={{ opacity: 0 }}>
-          <div className="glass-dark rounded-2xl p-5 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-primary/[0.1] flex items-center justify-center flex-shrink-0">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="var(--primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-[10px] text-muted-foreground font-medium tracking-wide mb-0.5">Renders Delivered</p>
-              <p className="text-lg font-bold text-foreground tracking-tight">12,400+</p>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Right Widgets ─────────────────────────────────────── */}
-        <div
-          ref={heroRightWidgetRef}
-          className="hero-widget hero-widget-right"
-          style={{ opacity: 0 }}>
-          <div className="glass-dark rounded-2xl p-5 flex-shrink-0">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-accent" />
-              <span className="text-[10px] text-muted-foreground font-medium tracking-wide">Live Render</span>
-              <span className="ml-auto text-[10px] text-accent font-mono">98%</span>
-            </div>
-            <div className="flex items-end gap-1 h-10">
-              {[40, 65, 55, 80, 70, 90, 75, 95].map((h, i) => (
-                <div key={i} className="w-2 rounded-sm" style={{ height: `${h}%`, background: i === 7 ? 'var(--accent)' : i >= 5 ? 'rgba(74,158,255,0.45)' : 'rgba(201,169,110,0.25)' }} />
-              ))}
-            </div>
-          </div>
-
-          <div className="glass-dark rounded-2xl p-5 flex items-center gap-3.5 flex-shrink-0">
-            <div className="w-10 h-10 rounded-xl bg-secondary/[0.1] flex items-center justify-center flex-shrink-0">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" stroke="var(--secondary)" strokeWidth="1.5" />
-                <path d="M12 6v6l4 2" stroke="var(--secondary)" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-[10px] text-muted-foreground font-medium tracking-wide mb-0.5">Avg. Turnaround</p>
-              <p className="text-lg font-bold text-foreground tracking-tight">5 Days</p>
-            </div>
-          </div>
-        </div>
-
         {/* ── Hero Content ──────────────────────────────────────── */}
         <div
           ref={contentRef}
@@ -999,11 +943,11 @@ export default function HeroSection() {
                                             'hl-hidden'
               }`}
               style={{ fontSize: 'clamp(2.4rem, 7vw, 5.5rem)' }}>
-              <span style={{ color: '#fff' }}>Motion</span>
-              <span className="text-gradient-gold">Grace</span>
+              <span style={{ color: '#ffffff' }}>Motion</span>
+              <span style={{ color: '#ffffff' }}>Grace</span>
             </h1>
 
-            {/* Create Once, Build Forever — smaller to fit comfortably */}
+            {/* Create Once, Build Forever */}
             <h1
               className={`hl-headline ${
                 hlPhase === 'exitMG'      ? 'hl-fade-in'    :
@@ -1012,8 +956,19 @@ export default function HeroSection() {
                                             'hl-hidden'
               }`}
               style={{ fontSize: 'clamp(1.55rem, 4.4vw, 3.5rem)', letterSpacing: '-0.025em' }}>
-              <span style={{ color: '#fff' }}>Create Once,</span>
-              <span className="text-gradient-gold">&nbsp;Build Forever</span>
+              <span style={{
+                background: 'linear-gradient(to bottom right, #ffffff 0%, #e0e0e0 100%)',
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}>Create Once,</span>
+              <span style={{
+                background: 'linear-gradient(to bottom right, #0894ff 0%, #c959dd 34%, #ff2e54 68%, #ff9004 100%)',
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                filter: 'drop-shadow(0 0 28px rgba(201,89,221,0.45)) drop-shadow(0 0 56px rgba(8,148,255,0.2))',
+              }}>&nbsp;Build Forever</span>
             </h1>
           </div>
 
@@ -1064,12 +1019,16 @@ export default function HeroSection() {
               alignItems: 'center',
               gap: '1.75rem',
             }}>
-            <button
-              onClick={() => document.querySelector('#cta')?.scrollIntoView({ behavior: 'smooth' })}
-              className="get-started-btn">
+            <a
+              href="https://app.motiongraceco.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="get-started-btn"
+              data-cursor="button"
+              data-cursor-label="Let's Go">
               Get Started
               <span className="btn-arrow">→</span>
-            </button>
+            </a>
 
             {/* ── Scroll indicator ─────────────────────────── */}
             <div
@@ -1096,6 +1055,8 @@ export default function HeroSection() {
             onMouseLeave={() => { setViewBtnHovered(false); if (storyOpenTimerRef.current) { clearTimeout(storyOpenTimerRef.current); storyOpenTimerRef.current = null; } }}
             className="view-story-btn"
             aria-label="View our story"
+            data-cursor="video"
+            data-cursor-label="Play"
           >
             {/* Animated play ring */}
             <span className="story-ring">
@@ -1166,7 +1127,7 @@ export default function HeroSection() {
                   transition: 'opacity 0.9s ease, transform 0.9s cubic-bezier(0.16,1,0.3,1)',
                 }}
               >
-                <div style={{ fontSize: '0.6rem', letterSpacing: '0.4em', textTransform: 'uppercase', color: 'rgba(201,169,110,0.4)', marginBottom: '1.2rem', fontFamily: 'var(--font-sans)' }}>The Story of</div>
+                <div style={{ fontSize: '0.6rem', letterSpacing: '0.4em', textTransform: 'uppercase', color: 'rgba(201,89,221,0.4)', marginBottom: '1.2rem', fontFamily: 'var(--font-sans)' }}>The Story of</div>
                 <h2 style={{ margin: 0, lineHeight: 0.88, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <span style={{ fontSize: 'clamp(1.2rem, 5vw, 3.5rem)', fontWeight: 300, letterSpacing: '0.25em', textTransform: 'uppercase', color: 'rgba(237,233,227,0.3)' }}>The</span>
                   <span style={{ fontSize: 'clamp(4.5rem, 20vw, 16rem)', fontWeight: 900, letterSpacing: '-0.06em', color: 'rgba(237,233,227,0.95)', textShadow: '0 0 120px rgba(237,233,227,0.06)', lineHeight: 0.85 }}>Problem</span>
@@ -1175,9 +1136,9 @@ export default function HeroSection() {
               </div>
               {/* Scroll hint */}
               <div ref={storyTitleHintRef} style={{ position: 'absolute', bottom: '3rem', left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', opacity: titlePhase === 'shown' ? 1 : 0, transition: 'opacity 0.8s ease', pointerEvents: 'none' }}>
-                <span style={{ fontSize: '8px', letterSpacing: '0.32em', textTransform: 'uppercase', color: 'rgba(201,169,110,0.4)', fontFamily: 'var(--font-sans)' }}>scroll</span>
-                <div style={{ position: 'relative', width: '1px', height: '52px', background: 'rgba(201,169,110,0.12)' }}>
-                  <div style={{ position: 'absolute', top: 0, left: 0, width: '1px', height: '40%', background: 'rgba(201,169,110,0.7)', animation: 'sScrollDrop 1.8s ease-in-out infinite' }} />
+                <span style={{ fontSize: '8px', letterSpacing: '0.32em', textTransform: 'uppercase', color: 'rgba(201,89,221,0.4)', fontFamily: 'var(--font-sans)' }}>scroll</span>
+                <div style={{ position: 'relative', width: '1px', height: '52px', background: 'rgba(201,89,221,0.12)' }}>
+                  <div style={{ position: 'absolute', top: 0, left: 0, width: '1px', height: '40%', background: 'rgba(201,89,221,0.7)', animation: 'sScrollDrop 1.8s ease-in-out infinite' }} />
                 </div>
               </div>
             </div>
@@ -1265,22 +1226,22 @@ export default function HeroSection() {
                 <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 90% 80% at 50% 50%, transparent 20%, rgba(0,0,0,0.3) 100%)' }} />
                 <div style={{
                   position: 'absolute', left: 0, right: 0, top: '50%', height: '1px',
-                  background: `linear-gradient(90deg, transparent 0%, rgba(201,169,110,0) 15%, rgba(201,169,110,${sWordProgress * 0.18}) 35%, rgba(255,240,200,${sWordProgress * 0.28}) 50%, rgba(201,169,110,${sWordProgress * 0.18}) 65%, rgba(201,169,110,0) 85%, transparent 100%)`,
+                  background: `linear-gradient(90deg, transparent 0%, rgba(201,89,221,0) 15%, rgba(201,89,221,${sWordProgress * 0.18}) 35%, rgba(255,240,200,${sWordProgress * 0.28}) 50%, rgba(201,89,221,${sWordProgress * 0.18}) 65%, rgba(201,89,221,0) 85%, transparent 100%)`,
                   transform: 'translateY(-50%)', pointerEvents: 'none',
                 }} />
                 <div style={{
                   position: 'absolute', pointerEvents: 'none',
                   width: '55vw', height: '45vh', left: '50%', top: '50%', transform: 'translate(-50%,-50%)',
-                  background: `radial-gradient(ellipse 80% 70% at 50% 50%, rgba(201,169,110,${sGlowPulse ? 0.055 : sWordProgress * 0.025}) 0%, transparent 70%)`,
+                  background: `radial-gradient(ellipse 80% 70% at 50% 50%, rgba(201,89,221,${sGlowPulse ? 0.055 : sWordProgress * 0.025}) 0%, transparent 70%)`,
                   filter: 'blur(60px)', transition: sGlowPulse ? 'background 2s ease' : 'background 0.3s ease',
                   animation: sGlowPulse ? 'subtle-bloom 5s ease-in-out infinite' : 'none',
                 }} />
 
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 6vw' }}>
                   <div style={{ marginBottom: '2.5rem', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '20px', height: '1px', background: 'rgba(201,169,110,0.5)' }} />
-                    <span style={{ fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', color: 'rgba(201,169,110,0.7)', fontWeight: 700, fontFamily: 'var(--font-sans)' }}>The Alternative</span>
-                    <div style={{ width: '20px', height: '1px', background: 'rgba(201,169,110,0.5)' }} />
+                    <div style={{ width: '20px', height: '1px', background: 'rgba(201,89,221,0.5)' }} />
+                    <span style={{ fontSize: '10px', letterSpacing: '0.25em', textTransform: 'uppercase', color: 'rgba(201,89,221,0.7)', fontWeight: 700, fontFamily: 'var(--font-sans)' }}>The Alternative</span>
+                    <div style={{ width: '20px', height: '1px', background: 'rgba(201,89,221,0.5)' }} />
                   </div>
                   <div ref={storyS2RevealRef} style={{ textAlign: 'center', maxWidth: '820px' }}>
                     <h2 style={{ fontSize: 'clamp(2rem, 5.5vw, 4.2rem)', fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1.05, margin: 0 }}>
@@ -1292,7 +1253,7 @@ export default function HeroSection() {
                     </h2>
                   </div>
                   <div style={{ marginTop: '2.5rem' }}>
-                    <span style={{ fontSize: '11px', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'rgba(201,169,110,0.38)', fontWeight: 400, fontFamily: 'var(--font-sans)' }}>AI-powered product visuals</span>
+                    <span style={{ fontSize: '11px', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'rgba(201,89,221,0.38)', fontWeight: 400, fontFamily: 'var(--font-sans)' }}>AI-powered product visuals</span>
                   </div>
                 </div>
 
@@ -1303,10 +1264,10 @@ export default function HeroSection() {
                   transition: sArrowDone ? 'opacity 0.5s ease' : 'opacity 0.8s ease',
                   pointerEvents: 'none', zIndex: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
                 }}>
-                  <span style={{ fontSize: '8px', letterSpacing: '0.32em', textTransform: 'uppercase', color: `rgba(201,169,110,${0.2 + sArrowFill * 0.3})`, fontFamily: 'var(--font-sans)' }}>scroll</span>
-                  <div style={{ position: 'relative', width: '1px', height: '52px', background: 'rgba(201,169,110,0.12)' }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, width: '1px', height: `${sArrowFill * 100}%`, background: `rgba(201,169,110,${0.4 + sArrowFill * 0.5})`, transition: 'height 0.06s linear', boxShadow: sArrowFill > 0.7 ? '0 0 6px rgba(201,169,110,0.5)' : 'none' }} />
-                    <div style={{ position: 'absolute', bottom: '-3px', left: '50%', transform: 'translateX(-50%)', width: '3px', height: '3px', borderRadius: '50%', background: `rgba(201,169,110,${0.25 + sArrowFill * 0.6})` }} />
+                  <span style={{ fontSize: '8px', letterSpacing: '0.32em', textTransform: 'uppercase', color: `rgba(201,89,221,${0.2 + sArrowFill * 0.3})`, fontFamily: 'var(--font-sans)' }}>scroll</span>
+                  <div style={{ position: 'relative', width: '1px', height: '52px', background: 'rgba(201,89,221,0.12)' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, width: '1px', height: `${sArrowFill * 100}%`, background: `rgba(201,89,221,${0.4 + sArrowFill * 0.5})`, transition: 'height 0.06s linear', boxShadow: sArrowFill > 0.7 ? '0 0 6px rgba(201,89,221,0.5)' : 'none' }} />
+                    <div style={{ position: 'absolute', bottom: '-3px', left: '50%', transform: 'translateX(-50%)', width: '3px', height: '3px', borderRadius: '50%', background: `rgba(201,89,221,${0.25 + sArrowFill * 0.6})` }} />
                   </div>
                 </div>
                 <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 18%, transparent 82%, rgba(0,0,0,0.3) 100%)' }} />
@@ -1386,10 +1347,10 @@ export default function HeroSection() {
 
                 {/* Scroll hint at story start */}
                 <div style={{ position: 'absolute', bottom: '44px', left: '8vw', opacity: sStoryProgress < 0.04 ? 1 : 0, transition: 'opacity 0.6s ease', display: 'flex', alignItems: 'center', gap: '12px', pointerEvents: 'none' }}>
-                  <div style={{ width: '1px', height: '36px', background: 'rgba(201,169,110,0.2)', position: 'relative' }}>
-                    <div style={{ position: 'absolute', top: 0, width: '1px', height: '40%', background: 'rgba(201,169,110,0.7)', animation: 'sScrollDrop 1.8s ease-in-out infinite' }} />
+                  <div style={{ width: '1px', height: '36px', background: 'rgba(201,89,221,0.2)', position: 'relative' }}>
+                    <div style={{ position: 'absolute', top: 0, width: '1px', height: '40%', background: 'rgba(201,89,221,0.7)', animation: 'sScrollDrop 1.8s ease-in-out infinite' }} />
                   </div>
-                  <span style={{ fontSize: '8px', letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(201,169,110,0.35)', fontFamily: 'var(--font-sans)' }}>scroll to explore</span>
+                  <span style={{ fontSize: '8px', letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(201,89,221,0.35)', fontFamily: 'var(--font-sans)' }}>scroll to explore</span>
                 </div>
 
                 {/* Grain + vignette */}
@@ -1442,7 +1403,7 @@ export default function HeroSection() {
         }
         .hero-golden-veil {
           position: absolute; inset: 0; pointer-events: none;
-          background: linear-gradient(to top, rgba(201,169,110,0.22) 0%, rgba(201,169,110,0.07) 30%, transparent 65%);
+          background: linear-gradient(to top, rgba(201,89,221,0.22) 0%, rgba(201,89,221,0.07) 30%, transparent 65%);
           opacity: 0; will-change: opacity;
         }
 
@@ -1569,44 +1530,101 @@ export default function HeroSection() {
           align-items: center;
         }
         .typing-cursor {
-          color: rgba(201,169,110,0.9);
+          color: rgba(201,89,221,0.9);
           animation: cursor-blink 0.8s step-end infinite;
-          text-shadow: 0 0 10px rgba(201,169,110,0.7);
+          text-shadow: 0 0 10px rgba(201,89,221,0.7);
           margin-left: 1px;
           font-weight: 100;
         }
         @keyframes cursor-blink { 0%,100%{opacity:1} 50%{opacity:0} }
 
-        /* ── GET STARTED BUTTON  — minimal ghost style
-        ══════════════════════════════════════════════════════════ */
+        /* ── GET STARTED BUTTON — exact nav pill clone + apple glow ── */
         .get-started-btn {
-          display: inline-flex; align-items: center; gap: 0.5rem;
-          padding: 0.75rem 2rem;
-          border-radius: 9999px;
-          border: 1px solid rgba(201,169,110,0.35);
-          background: transparent;
-          color: rgba(201,169,110,0.9);
-          font-size: 0.68rem;
-          font-weight: 600;
-          letter-spacing: 0.18em;
-          text-transform: uppercase;
-          cursor: pointer;
-          outline: none;
-          transition: border-color 0.35s ease,
-                      color        0.35s ease,
-                      box-shadow   0.35s ease,
-                      transform    0.35s cubic-bezier(0.34,1.56,0.64,1);
-        }
-        .get-started-btn:hover {
-          border-color: rgba(201,169,110,0.7);
-          color: rgba(232,212,160,1);
-          box-shadow: 0 0 22px rgba(201,169,110,0.18);
-          transform: scale(1.03);
-        }
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 1.6rem;
+
+  border-radius: 9999px;
+  border: 1px solid transparent;
+
+  background: rgba(237, 233, 227, 0.06);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+
+  color: rgba(237,233,227,0.95);
+
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+
+  cursor: none !important;
+  position: relative;
+
+  transform: scale(1.03);
+
+  transition: 
+    transform 0.35s cubic-bezier(0.34,1.56,0.64,1),
+    box-shadow 0.4s ease;
+}
+
+/* Base gradient border */
+.get-started-btn::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 9999px;
+  padding: 1px;
+
+  background: linear-gradient(to right, #0894ff, #c959dd, #ff2e54, #ff9004);
+
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+
+  opacity: 0.9;
+}
+
+/* Base bottom glow */
+.get-started-btn::after {
+  content: '';
+  position: absolute;
+  bottom: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 75%;
+  height: 22px;
+
+  background: linear-gradient(to right, #0894ff44, #c959dd66, #ff2e5444, #ff900433);
+
+  filter: blur(12px);
+  border-radius: 50%;
+  opacity: 0.7;
+
+  transition: all 0.4s ease;
+}
+
+/* REAL hover glow */
+.get-started-btn:hover {
+  transform: scale(1.07);
+
+  /* THIS is what actually makes it glow more */
+  box-shadow:
+    0 0 20px rgba(8, 148, 255, 0.35),
+    0 0 40px rgba(201, 89, 221, 0.25),
+    0 0 60px rgba(255, 46, 84, 0.2);
+}
+
+/* Enhance bottom glow */
+.get-started-btn:hover::after {
+  opacity: 1;
+  filter: blur(20px);
+  transform: translateX(-50%) scale(1.15);
+}
 
         .btn-arrow {
           display: inline-block;
-          font-size: 0.8rem;
+          font-size: 0.75rem;
           transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
         }
         .get-started-btn:hover .btn-arrow { transform: translateX(4px); }
@@ -1614,7 +1632,7 @@ export default function HeroSection() {
         /* ── View Our Story Button ───────────────────────── */
         .view-story-btn {
           display: flex; align-items: center; gap: 0.75rem;
-          background: transparent; border: none; cursor: pointer;
+          background: transparent; border: none; cursor: none !important;
           padding: 0; outline: none;
         }
         .story-ring { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -1638,13 +1656,17 @@ export default function HeroSection() {
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
           overflow: hidden;
+          cursor: none !important;
+        }
+        .story-overlay *, .story-overlay *::before, .story-overlay *::after {
+          cursor: none !important;
         }
         .story-close-btn {
           position: fixed; top: 1.75rem; right: 1.75rem;
           z-index: 9995; width: 40px; height: 40px;
           background: rgba(237,233,227,0.06);
           border: 1px solid rgba(237,233,227,0.1);
-          border-radius: 50%; cursor: pointer;
+          border-radius: 50%; cursor: none !important;
           display: flex; align-items: center; justify-content: center;
           transition: background 0.3s ease, border-color 0.3s ease, transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
           outline: none;
@@ -1691,7 +1713,7 @@ export default function HeroSection() {
         .ss2-reveal-word.ss2-brand {
           font-size: clamp(2.6rem, 7vw, 6rem); font-weight: 800; letter-spacing: -0.035em;
           -webkit-text-fill-color: transparent;
-          background: linear-gradient(135deg, #B8935A 0%, #E8D4A0 45%, #C9A96E 100%);
+          background: linear-gradient(135deg, #B8935A 0%, #E8D4A0 45%, #c959dd 100%);
           -webkit-background-clip: text; background-clip: text;
           opacity: 0.15; transition: opacity 0.55s cubic-bezier(0.16,1,0.3,1);
         }
